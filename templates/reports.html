@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Reports{% endblock %}
+{% block page_title %}Security Reports{% endblock %}
+{% block breadcrumb %}<span>Reports</span>{% endblock %}
+
+{% block content %}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+  <div>
+    <h1>Security Assessment Reports</h1>
+    <p>Download and manage generated PDF vulnerability assessment reports.</p>
+  </div>
+</div>
+
+<!-- Phase Notice -->
+<div class="alert-banner info" style="margin-bottom: 24px;">
+  <span class="alert-icon">ℹ️</span>
+  <div class="alert-content">
+    <div class="alert-title">Phase 8 — PDF Report Generation</div>
+    <div class="alert-text">
+      Automated PDF report generation will be implemented in Phase 8. The report will include an Executive Summary,
+      Detailed Findings, CVE Information, Risk Scores, and Remediation Recommendations — all formatted professionally.
+    </div>
+  </div>
+</div>
+
+<!-- Generate Report Form (placeholder) -->
+<div style="display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start;">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📄 Generate New Report</div>
+    </div>
+    <div class="card-body">
+
+      <div class="form-group">
+        <label class="form-label" for="report-assessment">Select Assessment</label>
+        <select id="report-assessment" class="form-control">
+          <option value="">— Choose completed assessment —</option>
+          {% for a in assessments %}
+          <option value="{{ a.id }}">{{ a.name }} — {{ a.target.ip_address }} ({{ a.vulnerability_count }} findings)</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="report-type">Report Type</label>
+        <select id="report-type" class="form-control">
+          <option value="full">Full Assessment Report</option>
+          <option value="executive">Executive Summary Only</option>
+          <option value="technical">Technical Findings Only</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="alert('Phase 8: PDF generation coming soon!')">
+        📥 Generate PDF Report
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Report Structure Preview -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📑 Report Contents</div>
+    </div>
+    <div class="card-body" style="padding: 16px 20px;">
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--text-secondary);">
+        <div>📌 Executive Summary</div>
+        <div>🎯 Target Information</div>
+        <div>📅 Assessment Date &amp; Scope</div>
+        <div>📊 Vulnerability Statistics</div>
+        <div>🚨 Critical Findings</div>
+        <div>🔥 High Severity Findings</div>
+        <div>⚡ Medium Severity Findings</div>
+        <div>✅ Low Severity Findings</div>
+        <div>🔍 Detailed Findings with Evidence</div>
+        <div>🛠️ Remediation Recommendations</div>
+        <div>📈 Overall Risk Summary</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Existing Reports -->
+{% if reports %}
+<div class="card mt-24">
+  <div class="card-header">
+    <div class="card-title">📂 Generated Reports</div>
+  </div>
+  <div style="overflow-x: auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Report</th>
+          <th>Assessment</th>
+          <th>Generated</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reports %}
+        <tr>
+          <td class="text-mono text-xs">{{ r.filename }}</td>
+          <td>{{ r.assessment.name }}</td>
+          <td class="text-muted text-xs">{{ r.generated_at.strftime('%d %b %Y, %H:%M') }}</td>
+          <td><a href="#" class="btn btn-secondary btn-sm">📥 Download</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card mt-24">
+  <div class="empty-state">
+    <div class="empty-icon">📄</div>
+    <h3>No reports generated yet</h3>
+    <p>Complete an assessment and generate a PDF report to see it here.</p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

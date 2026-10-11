@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Vulnerabilities{% endblock %}
+{% block page_title %}Vulnerability Results{% endblock %}
+{% block breadcrumb %}<span>Vulnerabilities</span>{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <h1>Vulnerability Findings</h1>
+  <p>All detected vulnerabilities across all assessments. Use the filters below to narrow results.</p>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}"
+     class="filter-btn {% if severity_filter == 'all' %}active{% endif %}">
+    All <span class="filter-count">{{ counts.all }}</span>
+  </a>
+  <a href="{{ url_for('vulnerabilities.list_vulnerabilities', severity='critical') }}"
+     class="filter-btn {% if severity_filter == 'critical' %}active-critical{% endif %}">
+    🚨 Critical <span class="filter-count">{{ counts.critical }}</span>
+  </a>
+  <a href="{{ url_for('vulnerabilities.list_vulnerabilities', severity='high') }}"
+     class="filter-btn {% if severity_filter == 'high' %}active-high{% endif %}">
+    🔥 High <span class="filter-count">{{ counts.high }}</span>
+  </a>
+  <a href="{{ url_for('vulnerabilities.list_vulnerabilities', severity='medium') }}"
+     class="filter-btn {% if severity_filter == 'medium' %}active-medium{% endif %}">
+    ⚡ Medium <span class="filter-count">{{ counts.medium }}</span>
+  </a>
+  <a href="{{ url_for('vulnerabilities.list_vulnerabilities', severity='low') }}"
+     class="filter-btn {% if severity_filter == 'low' %}active-low{% endif %}">
+    ✅ Low <span class="filter-count">{{ counts.low }}</span>
+  </a>
+</div>
+
+<!-- Vulnerabilities Table -->
+<div class="card">
+  <div style="overflow-x: auto;">
+    {% if vulnerabilities %}
+    <table class="data-table" id="vuln-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Vulnerability</th>
+          <th>Target / Port</th>
+          <th>Severity</th>
+          <th>Risk Score</th>
+          <th>CVE ID</th>
+          <th>Validation</th>
+          <th>Source</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in vulnerabilities %}
+        <tr>
+          <td class="text-muted text-mono text-xs">{{ v.id }}</td>
+          <td>
+            <div class="vuln-name">
+              <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=v.id) }}" class="name">
+                {{ v.name }}
+              </a>
+              {% if v.affected_service %}
+              <span class="meta">
+                Port {{ v.affected_port }}/{{ v.affected_protocol }} — {{ v.affected_service }}
+              </span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-weight:500; color:var(--text-primary); font-size:12px;">
+                {{ v.assessment.target.name }}
+              </span>
+              <span class="text-mono text-xs text-accent">{{ v.assessment.target.ip_address }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="badge badge-{{ v.severity | lower }}">{{ v.severity }}</span>
+          </td>
+          <td>
+            <div class="risk-score">
+              <span class="risk-score-value text-{{ v.severity | lower }}">{{ "%.1f"|format(v.risk_score) }}</span>
+              <div class="risk-bar">
+                <div class="risk-bar-fill {{ v.severity | lower }}"
+                     style="width: {{ (v.risk_score / 10 * 100)|round }}%;">
+                </div>
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if v.cve_id %}
+              <a href="https://nvd.nist.gov/vuln/detail/{{ v.cve_id }}"
+                 target="_blank" rel="noopener"
+                 class="cve-tag">{{ v.cve_id }}</a>
+            {% else %}
+              <span class="text-muted text-xs">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if v.validation_status == 'Confirmed' %}
+              <span class="badge badge-confirmed">✅ Confirmed</span>
+            {% elif v.validation_status == 'False Positive' %}
+              <span class="badge badge-fp">🚫 False Positive</span>
+            {% elif v.validation_status == 'Needs Review' %}
+              <span class="badge badge-review">🔍 Needs Review</span>
+            {% else %}
+              <span class="badge badge-unverified">❓ Unverified</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="text-mono text-xs" style="color:var(--text-muted);">{{ v.source | upper }}</span>
+          </td>
+          <td>
+            <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=v.id) }}"
+               class="btn btn-secondary btn-sm">Details</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">🛡️</div>
+        <h3>No vulnerabilities found</h3>
+        {% if severity_filter != 'all' %}
+          <p>No {{ severity_filter }} severity vulnerabilities detected.</p>
+          <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}" class="btn btn-secondary">Clear Filter</a>
+        {% else %}
+          <p>Run an assessment to detect vulnerabilities.</p>
+          <a href="{{ url_for('assessments.new_assessment') }}" class="btn btn-primary">New Assessment</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

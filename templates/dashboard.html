@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block breadcrumb %}<span>Dashboard</span>{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================
+     Top Stats Row
+     ============================================================ -->
+<div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+
+  <!-- Total Assessments -->
+  <div class="stat-card primary">
+    <div class="stat-icon-wrap">🔍</div>
+    <div class="stat-body">
+      <div class="stat-value" data-target="{{ total_assessments }}">{{ total_assessments }}</div>
+      <div class="stat-label">Total Assessments</div>
+      <div class="stat-sub">{{ total_targets }} targets tracked</div>
+    </div>
+  </div>
+
+  <!-- Total Vulnerabilities -->
+  <div class="stat-card info">
+    <div class="stat-icon-wrap">🐛</div>
+    <div class="stat-body">
+      <div class="stat-value" data-target="{{ total_vulns }}">{{ total_vulns }}</div>
+      <div class="stat-label">Total Vulnerabilities</div>
+      <div class="stat-sub">{{ confirmed_count }} confirmed</div>
+    </div>
+  </div>
+
+  <!-- Critical -->
+  <div class="stat-card critical">
+    <div class="stat-icon-wrap">🚨</div>
+    <div class="stat-body">
+      <div class="stat-value" data-target="{{ critical_count }}">{{ critical_count }}</div>
+      <div class="stat-label">Critical Findings</div>
+      <div class="stat-sub">Immediate attention required</div>
+    </div>
+  </div>
+
+  <!-- High -->
+  <div class="stat-card high">
+    <div class="stat-icon-wrap">🔥</div>
+    <div class="stat-body">
+      <div class="stat-value" data-target="{{ high_count }}">{{ high_count }}</div>
+      <div class="stat-label">High Severity</div>
+      <div class="stat-sub">Address within 24 hours</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Second stats row -->
+<div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+
+  <div class="stat-card medium">
+    <div class="stat-icon-wrap">⚡</div>
+    <div class="stat-body">
+      <div class="stat-value" data-target="{{ medium_count }}">{{ medium_count }}</div>
+      <div class="stat-label">Medium Severity</div>
+      <div class="stat-sub">Address within 7 days</div>
+    </div>
+  </div>
+
+  <div class="stat-card low">
+    <div class="stat-icon-wrap">✅</div>
+    <div class="stat-body">
+      <div class="stat-value" data-target="{{ low_count }}">{{ low_count }}</div>
+      <div class="stat-label">Low Severity</div>
+      <div class="stat-sub">Address when possible</div>
+    </div>
+  </div>
+
+  <div class="stat-card purple">
+    <div class="stat-icon-wrap">🔎</div>
+    <div class="stat-body">
+      <div class="stat-value" data-target="{{ confirmed_count }}">{{ confirmed_count }}</div>
+      <div class="stat-label">Confirmed</div>
+      <div class="stat-sub">Analyst validated</div>
+    </div>
+  </div>
+
+  <div class="stat-card info">
+    <div class="stat-icon-wrap">🚫</div>
+    <div class="stat-body">
+      <div class="stat-value" data-target="{{ false_positive_count }}">{{ false_positive_count }}</div>
+      <div class="stat-label">False Positives</div>
+      <div class="stat-sub">Marked by analyst</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     Main Dashboard Grid
+     ============================================================ -->
+<div class="dashboard-grid">
+
+  <!-- Recent Vulnerabilities Table -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="icon">⚠️</span> Top Risk Vulnerabilities
+      </div>
+      <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}" class="card-action">View all →</a>
+    </div>
+    <div style="overflow-x: auto;">
+      {% if recent_vulns %}
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Vulnerability</th>
+            <th>Severity</th>
+            <th>Risk Score</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in recent_vulns %}
+          <tr>
+            <td>
+              <div class="vuln-name">
+                <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=v.id) }}" class="name">
+                  {{ v.name }}
+                </a>
+                {% if v.cve_id %}
+                <span class="meta">{{ v.cve_id }}</span>
+                {% elif v.affected_service %}
+                <span class="meta">Port {{ v.affected_port }}/{{ v.affected_protocol }} — {{ v.affected_service }}</span>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <span class="badge badge-{{ v.severity | lower }}">{{ v.severity }}</span>
+            </td>
+            <td>
+              <div class="risk-score">
+                <span class="risk-score-value">{{ "%.1f"|format(v.risk_score) }}</span>
+                <div class="risk-bar">
+                  <div class="risk-bar-fill {{ v.severity | lower }}"
+                       data-score="{{ v.risk_score }}"
+                       style="width: {{ (v.risk_score / 10 * 100)|round }}%">
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if v.validation_status == 'Confirmed' %}
+                <span class="badge badge-confirmed">Confirmed</span>
+              {% elif v.validation_status == 'False Positive' %}
+                <span class="badge badge-fp">False Positive</span>
+              {% elif v.validation_status == 'Needs Review' %}
+                <span class="badge badge-review">Needs Review</span>
+              {% else %}
+                <span class="badge badge-unverified">Unverified</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">🛡️</div>
+          <h3>No vulnerabilities yet</h3>
+          <p>Run your first assessment to see findings here.</p>
+          <a href="{{ url_for('assessments.new_assessment') }}" class="btn btn-primary">Start Assessment</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+
+    <!-- Severity Donut Chart -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">📈</span> Severity Distribution</div>
+      </div>
+      <div class="card-body">
+        <div class="chart-container" style="height: 220px; display:flex; align-items:center; justify-content:center;">
+          <canvas id="severityChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assessment Status Chart -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">📋</span> Assessment Status</div>
+      </div>
+      <div class="card-body">
+        <div class="chart-container" style="height: 160px;">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Recent Assessments Table -->
+  <div class="card full-width">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">🔍</span> Recent Assessments</div>
+      <a href="{{ url_for('assessments.list_assessments') }}" class="card-action">View all →</a>
+    </div>
+    <div style="overflow-x: auto;">
+      {% if recent_assessments %}
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Assessment Name</th>
+            <th>Target</th>
+            <th>Scan Type</th>
+            <th>Status</th>
+            <th>Vulnerabilities</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in recent_assessments %}
+          <tr>
+            <td>
+              <a href="{{ url_for('assessments.assessment_detail', assessment_id=a.id) }}">
+                {{ a.name }}
+              </a>
+            </td>
+            <td>
+              <div style="display:flex; flex-direction:column;">
+                <span style="color: var(--text-primary); font-weight:500;">{{ a.target.name }}</span>
+                <span class="text-mono text-xs text-muted">{{ a.target.ip_address }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="text-mono text-xs text-accent">{{ a.scan_type | upper }}</span>
+            </td>
+            <td>
+              <span class="badge badge-{{ a.status }}">{{ a.status | capitalize }}</span>
+            </td>
+            <td>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                {% if a.critical_count > 0 %}
+                  <span class="badge badge-critical">{{ a.critical_count }} C</span>
+                {% endif %}
+                {% if a.high_count > 0 %}
+                  <span class="badge badge-high">{{ a.high_count }} H</span>
+                {% endif %}
+                {% if a.medium_count > 0 %}
+                  <span class="badge badge-medium">{{ a.medium_count }} M</span>
+                {% endif %}
+                {% if a.low_count > 0 %}
+                  <span class="badge badge-low">{{ a.low_count }} L</span>
+                {% endif %}
+                {% if a.vulnerability_count == 0 %}
+                  <span class="text-muted text-xs">None detected</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="text-muted text-xs">
+              {{ a.created_at.strftime('%d %b %Y, %H:%M') }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <h3>No assessments yet</h3>
+          <p>Start your first vulnerability assessment to see results here.</p>
+          <a href="{{ url_for('assessments.new_assessment') }}" class="btn btn-primary">New Assessment</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div><!-- /.dashboard-grid -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Pass server-side data to JS
+  const severityData = {{ severity_chart | tojson }};
+  const statusData   = {
+    completed: {{ completed_assessments }},
+    running:   {{ running_assessments }},
+    pending:   {{ pending_assessments }},
+    failed:    {{ failed_assessments }},
+  };
+
+  // Initialise charts after Chart.js loads
+  document.addEventListener('DOMContentLoaded', () => {
+    // Slight delay to ensure Chart.js CDN is ready
+    setTimeout(() => {
+      if (window.ThreatLens) {
+        window.ThreatLens.initSeverityChart(severityData);
+        window.ThreatLens.initStatusChart(statusData);
+      }
+    }, 200);
+
+    // Animate stat numbers
+    document.querySelectorAll('.stat-value[data-target]').forEach(el => {
+      const target = parseInt(el.getAttribute('data-target'), 10);
+      if (isNaN(target) || target === 0) return;
+      const duration = 1000;
+      const step = target / (duration / 16);
+      let current = 0;
+      const timer = setInterval(() => {
+        current += step;
+        if (current >= target) { el.textContent = target; clearInterval(timer); }
+        else { el.textContent = Math.floor(current); }
+      }, 16);
+    });
+
+    // Update critical nav badge
+    const badge = document.getElementById('critical-nav-count');
+    if (badge) badge.textContent = '{{ critical_count }}';
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Flask
+instance/
+.webassets-cache
+flask_session/
+
+# Database
+database/database.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Reports (generated)
+reports/generated/*.pdf
+
+# Logs
+*.log
+logs/
+
+# Secrets
+.env
+config.py
+
+# Screenshots (keep folder, ignore content)
+screenshots/*.png
+screenshots/*.jpg
+
+# Temporary files
+tmp/
+temp/
+*.tmp

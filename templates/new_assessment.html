@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}New Assessment{% endblock %}
+{% block page_title %}New Assessment{% endblock %}
+{% block breadcrumb %}
+  <a href="{{ url_for('assessments.list_assessments') }}">Assessments</a>
+  <span>›</span> <span>New Assessment</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- ⚠️ Authorization Warning -->
+<div class="alert-banner warning">
+  <span class="alert-icon">⚠️</span>
+  <div class="alert-content">
+    <div class="alert-title">Authorized Testing Only</div>
+    <div class="alert-text">
+      Only perform vulnerability assessments on systems you own or have <strong>explicit written authorization</strong> to test.
+      Unauthorized scanning is illegal and unethical. This tool is intended for controlled lab environments only.
+    </div>
+  </div>
+</div>
+
+<div class="page-header">
+  <h1>Start a New Vulnerability Assessment</h1>
+  <p>Configure the scan parameters and target details below. All assessments are logged for audit purposes.</p>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start;">
+
+  <!-- ========================
+       Assessment Form
+       ======================== -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">🎯 Assessment Configuration</div>
+    </div>
+    <div class="card-body">
+
+      <!-- Phase 2 Notice -->
+      <div class="alert-banner info" style="margin-bottom: 24px;">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content">
+          <div class="alert-title">Phase 1 — UI Preview</div>
+          <div class="alert-text">
+            The form below shows the intended UI. Scan execution will be implemented in
+            <strong>Phase 2 (Assessment Module)</strong> and <strong>Phase 3 (Scanning Engine)</strong>.
+          </div>
+        </div>
+      </div>
+
+      <form id="assessment-form" action="#" method="POST">
+
+        <!-- Assessment Name -->
+        <div class="form-group">
+          <label class="form-label" for="assessment-name">Assessment Name <span style="color:var(--critical)">*</span></label>
+          <input type="text"
+                 id="assessment-name"
+                 name="assessment_name"
+                 class="form-control"
+                 placeholder="e.g., Q4 Lab Server Baseline Scan"
+                 required />
+          <div class="form-hint">Give this assessment a descriptive name for your records.</div>
+        </div>
+
+        <!-- Target Selection -->
+        <div class="form-group">
+          <label class="form-label" for="target-select">Select Target <span style="color:var(--critical)">*</span></label>
+          <select id="target-select" name="target_id" class="form-control">
+            <option value="">— Choose existing target —</option>
+            {% for t in targets %}
+            <option value="{{ t.id }}">{{ t.name }} ({{ t.ip_address }})</option>
+            {% endfor %}
+          </select>
+          <div class="form-hint">Or add a new target below.</div>
+        </div>
+
+        <!-- New Target Fields -->
+        <div style="border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-bottom: 20px;">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px;">
+            ➕ Or Define New Target
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="target-name">Target Name</label>
+              <input type="text" id="target-name" name="target_name" class="form-control"
+                     placeholder="e.g., Metasploitable VM" />
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="target-ip">IP / Hostname <span style="color:var(--critical)">*</span></label>
+              <input type="text" id="target-ip" name="target_ip" class="form-control"
+                     placeholder="e.g., 192.168.1.100" />
+            </div>
+          </div>
+          <div class="form-group" style="margin-top: 14px; margin-bottom: 0;">
+            <label class="form-label" for="target-desc">Target Description</label>
+            <input type="text" id="target-desc" name="target_description" class="form-control"
+                   placeholder="Brief description of the target system" />
+          </div>
+        </div>
+
+        <!-- Scan Type -->
+        <div class="form-group">
+          <label class="form-label" for="scan-type">Scan Type <span style="color:var(--critical)">*</span></label>
+          <select id="scan-type" name="scan_type" class="form-control">
+            <option value="basic">Basic Scan — Fast port scan (Nmap -sV)</option>
+            <option value="full">Full Scan — Comprehensive with scripts (Nmap -A)</option>
+            <option value="stealth">Stealth Scan — SYN scan, minimal footprint</option>
+            <option value="custom">Custom — Manually specify options</option>
+          </select>
+          <div class="form-hint">Choose based on how thorough you need the scan to be.</div>
+        </div>
+
+        <!-- Scan Options Summary (Phase 3) -->
+        <div id="scan-options-info"
+             style="background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.15);
+                    border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 12px; color: var(--text-muted);">
+          <div style="font-weight: 600; color: var(--accent-primary); margin-bottom: 6px;">📌 Scan Preview</div>
+          <div id="scan-preview">nmap -sV -p 1-1000 &lt;target&gt;</div>
+        </div>
+
+        <!-- Notes -->
+        <div class="form-group">
+          <label class="form-label" for="assessment-notes">Assessment Notes</label>
+          <textarea id="assessment-notes" name="notes" class="form-control"
+                    placeholder="Optional: any context or notes about this assessment..."></textarea>
+        </div>
+
+        <!-- Authorization Checkbox -->
+        <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 24px;
+                    padding: 14px; background: var(--critical-bg); border: 1px solid rgba(239,68,68,0.25); border-radius: 8px;">
+          <input type="checkbox" id="authorized-check" name="authorized" required
+                 style="margin-top: 3px; accent-color: var(--accent-primary); width: 16px; height: 16px; cursor: pointer;" />
+          <label for="authorized-check" style="font-size: 13px; color: var(--text-secondary); cursor: pointer; line-height: 1.5;">
+            I confirm that I have <strong style="color:var(--text-primary)">explicit authorization</strong> to perform a
+            vulnerability assessment on the specified target. I understand that unauthorized scanning is illegal.
+          </label>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="btn btn-primary" id="start-assessment-btn" style="width: 100%; justify-content: center; padding: 13px;">
+          🚀 Start Assessment
+        </button>
+        <div class="form-hint" style="text-align: center; margin-top: 8px;">
+          Scanning will begin immediately after form submission (Phase 2+).
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================
+       Right Info Panel
+       ======================== -->
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+
+    <!-- Scan Types Info -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📖 Scan Types</div>
+      </div>
+      <div class="card-body" style="padding: 16px 20px;">
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: var(--low); margin-bottom: 4px;">Basic</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Port scan + service version detection. Fast, minimal noise.</div>
+            <div class="text-mono text-xs" style="color: var(--accent-cyan); margin-top: 4px;">nmap -sV -p 1-1000</div>
+          </div>
+
+          <div style="border-top: 1px solid var(--border); padding-top: 12px;">
+            <div style="font-size: 12px; font-weight: 600; color: var(--medium); margin-bottom: 4px;">Full</div>
+            <div style="font-size: 12px; color: var(--text-muted);">All ports + OS detection + vulnerability scripts.</div>
+            <div class="text-mono text-xs" style="color: var(--accent-cyan); margin-top: 4px;">nmap -A -p-</div>
+          </div>
+
+          <div style="border-top: 1px solid var(--border); padding-top: 12px;">
+            <div style="font-size: 12px; font-weight: 600; color: var(--high); margin-bottom: 4px;">Stealth</div>
+            <div style="font-size: 12px; color: var(--text-muted);">SYN scan — lower detection risk in lab environments.</div>
+            <div class="text-mono text-xs" style="color: var(--accent-cyan); margin-top: 4px;">nmap -sS -p 1-1000</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase Roadmap -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🗺️ Development Status</div>
+      </div>
+      <div class="card-body" style="padding: 16px 20px;">
+        <div style="display: flex; flex-direction: column; gap: 10px; font-size: 12px;">
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span style="color: var(--low);">✅</span>
+            <span style="color: var(--text-secondary);">Phase 1 — Project Setup</span>
+            <span class="badge badge-completed" style="margin-left:auto; font-size:10px;">Done</span>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span style="color: var(--medium);">🔄</span>
+            <span style="color: var(--text-secondary);">Phase 2 — Assessment Module</span>
+            <span class="badge badge-pending" style="margin-left:auto; font-size:10px;">Pending</span>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span style="color: var(--text-muted);">⏳</span>
+            <span style="color: var(--text-muted);">Phase 3 — Scanning Engine</span>
+            <span class="badge badge-pending" style="margin-left:auto; font-size:10px;">Pending</span>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span style="color: var(--text-muted);">⏳</span>
+            <span style="color: var(--text-muted);">Phase 4 — Vulnerability Analysis</span>
+            <span class="badge badge-pending" style="margin-left:auto; font-size:10px;">Pending</span>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span style="color: var(--text-muted);">⏳</span>
+            <span style="color: var(--text-muted);">Phase 5–10 — CVE, Reports, Polish</span>
+            <span class="badge badge-pending" style="margin-left:auto; font-size:10px;">Pending</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Update scan preview text dynamically
+  const scanTypeSelect = document.getElementById('scan-type');
+  const scanPreview    = document.getElementById('scan-preview');
+  const targetIpInput  = document.getElementById('target-ip');
+
+  const scanCommands = {
+    'basic':   'nmap -sV -p 1-1000 <target>',
+    'full':    'nmap -A -p- <target>',
+    'stealth': 'nmap -sS -sV -p 1-1000 <target>',
+    'custom':  'nmap [custom options] <target>',
+  };
+
+  function updatePreview() {
+    const ip  = targetIpInput.value.trim() || '<target>';
+    const cmd = (scanCommands[scanTypeSelect.value] || 'nmap <target>').replace('<target>', ip);
+    scanPreview.textContent = cmd;
+  }
+
+  scanTypeSelect.addEventListener('change', updatePreview);
+  targetIpInput.addEventListener('input', updatePreview);
+
+  // Prevent form submit (Phase 2 will handle this)
+  document.getElementById('assessment-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const authorized = document.getElementById('authorized-check').checked;
+    if (!authorized) {
+      alert('Please confirm authorization before proceeding.');
+      return;
+    }
+    alert('⚠️ Phase 1 Preview: Scan execution will be implemented in Phase 2.\nYour form data has been captured — backend integration coming next!');
+  });
+</script>
+{% endblock %}

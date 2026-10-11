@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- SEO -->
+  <title>{% block title %}ThreatLens{% endblock %} — Vulnerability Assessment System</title>
+  <meta name="description"
+    content="ThreatLens: Professional cybersecurity vulnerability assessment and risk management system for authorized security testing." />
+  <meta name="robots" content="noindex,nofollow" />
+
+  <!-- Preconnect for fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+
+  {% block head_extra %}{% endblock %}
+</head>
+
+<body>
+
+  <!-- ============================================================
+     Flash Messages
+     ============================================================ -->
+  {% with messages = get_flashed_messages(with_categories=True) %}
+  {% if messages %}
+  <div class="flash-messages">
+    {% for category, message in messages %}
+    <div class="flash-msg {{ category }}">
+      <span>
+        {% if category == 'success' %}✅{% elif category == 'error' %}❌{% else %}ℹ️{% endif %}
+      </span>
+      <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <!-- ============================================================
+     App Wrapper
+     ============================================================ -->
+  <div class="app-wrapper">
+
+    <!-- ========================
+       Sidebar
+       ======================== -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- Logo -->
+      <div class="sidebar-logo">
+        <div class="logo-icon">🛡️</div>
+        <div class="logo-text">
+          <span class="logo-name">ThreatLens</span>
+          <span class="logo-version">v1.0 — Phase 1</span>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="sidebar-nav" aria-label="Main navigation">
+
+        <div class="nav-section-label">Overview</div>
+
+        <a href="{{ url_for('dashboard.index') }}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}"
+          id="nav-dashboard">
+          <span class="nav-icon">📊</span>
+          Dashboard
+        </a>
+
+        <div class="nav-section-label">Assessment</div>
+
+        <a href="{{ url_for('assessments.new_assessment') }}"
+          class="nav-item {% if active_page == 'new_assessment' %}active{% endif %}" id="nav-new-assessment">
+          <span class="nav-icon">➕</span>
+          New Assessment
+        </a>
+
+        <a href="{{ url_for('assessments.list_assessments') }}"
+          class="nav-item {% if active_page == 'assessments' %}active{% endif %}" id="nav-assessments">
+          <span class="nav-icon">🔍</span>
+          Assessments
+        </a>
+
+        <div class="nav-section-label">Findings</div>
+
+        <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}"
+          class="nav-item {% if active_page == 'vulnerabilities' %}active{% endif %}" id="nav-vulnerabilities">
+          <span class="nav-icon">⚠️</span>
+          Vulnerabilities
+          <span class="nav-badge" id="critical-nav-count">—</span>
+        </a>
+
+        <div class="nav-section-label">Output</div>
+
+        <a href="{{ url_for('reports.list_reports') }}"
+          class="nav-item {% if active_page == 'reports' %}active{% endif %}" id="nav-reports">
+          <span class="nav-icon">📄</span>
+          Reports
+        </a>
+
+      </nav>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <div class="system-status">
+          <div class="status-dot"></div>
+          <span>System Online</span>
+        </div>
+        <div class="mt-8" style="font-size:11px; color:var(--text-muted);">
+          © {{ current_year }} Academic Project
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ========================
+       Main Content
+       ======================== -->
+    <div class="main-content">
+
+      <!-- Top Navbar -->
+      <header class="topnav">
+        <div class="topnav-left">
+          <div class="page-title">{% block page_title %}Dashboard{% endblock %}</div>
+          <div class="breadcrumb">
+            <span>Home</span>
+            <span>›</span>
+            {% block breadcrumb %}<span>Dashboard</span>{% endblock %}
+          </div>
+        </div>
+        <div class="topnav-right">
+          <div class="topnav-info">
+            <span class="icon">🖥️</span>
+            <span>Authorized Lab Environment</span>
+          </div>
+          <a href="{{ url_for('assessments.new_assessment') }}" class="btn-new-scan" id="btn-start-scan">
+            ➕ New Scan
+          </a>
+        </div>
+      </header>
+
+      <!-- Animated accent line -->
+      <div class="cyber-border"></div>
+
+      <!-- Page Content -->
+      <main class="page-content" id="main-content">
+        {% block content %}{% endblock %}
+      </main>
+
+    </div><!-- /.main-content -->
+  </div><!-- /.app-wrapper -->
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
+
+</body>
+
+</html>
