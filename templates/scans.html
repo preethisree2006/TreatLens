@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Scans{% endblock %}
+{% block page_title %}Security Scans{% endblock %}
+{% block breadcrumb %}<span>Scans</span>{% endblock %}
+
+{% block content %}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+  <div>
+    <h1>Security Scans</h1>
+    <p>Comprehensive history of all authorized Nmap service-discovery scans across all assessments.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('assessments.list_assessments') }}" class="btn btn-primary btn-sm">
+      ➕ Select Assessment to Scan
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="card-title">📡 All Executed Scans ({{ scans|length }})</div>
+    <span class="badge badge-info">Service Discovery (nmap -sV -T3)</span>
+  </div>
+  <div class="card-body" style="padding:0;">
+    {% if scans %}
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Scan ID</th>
+            <th>Target</th>
+            <th>Assessment</th>
+            <th>Status</th>
+            <th>Started (UTC)</th>
+            <th>Duration</th>
+            <th>Discovered Ports</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in scans %}
+          <tr>
+            <td>
+              <span class="text-mono text-accent fw-600">{{ s.scan_id }}</span>
+            </td>
+            <td>
+              <span class="text-mono" style="color:var(--accent-cyan); font-weight:600;">{{ s.target }}</span>
+            </td>
+            <td>
+              <a href="{{ url_for('assessments.assessment_detail', assessment_id=s.assessment_id) }}" style="color:var(--text-primary); font-weight:500;">
+                {{ s.assessment.name }}
+              </a>
+              <div class="text-mono text-muted text-xs">{{ s.assessment.assessment_id }}</div>
+            </td>
+            <td>
+              {% if s.status == 'Completed' %}
+                <span class="badge badge-completed">✅ Completed</span>
+              {% elif s.status == 'Running' %}
+                <span class="badge badge-running">⏳ Running</span>
+              {% elif s.status == 'Failed' %}
+                <span class="badge badge-failed">❌ Failed</span>
+              {% else %}
+                <span class="badge badge-pending">{{ s.status }}</span>
+              {% endif %}
+            </td>
+            <td class="text-muted text-xs">
+              {{ s.started_at.strftime('%d %b %Y, %H:%M:%S') if s.started_at else '—' }}
+            </td>
+            <td class="text-muted text-xs">
+              {% if s.completed_at and s.started_at %}
+                {{ "%.1f"|format((s.completed_at - s.started_at).total_seconds()) }}s
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge badge-info">{{ s.results.count() }} open ports</span>
+            </td>
+            <td>
+              <a href="{{ url_for('scans.scan_detail', scan_id=s.id) }}" class="btn btn-secondary btn-sm">
+                View Results →
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:48px 20px;">
+      <div class="empty-icon">📡</div>
+      <h3>No scans recorded yet</h3>
+      <p style="color:var(--text-muted); max-width:440px; margin:0 auto 16px;">
+        Start an assessment and run a controlled service scan to populate scan records.
+      </p>
+      <a href="{{ url_for('assessments.new_assessment') }}" class="btn btn-primary">
+        ➕ Create New Assessment
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

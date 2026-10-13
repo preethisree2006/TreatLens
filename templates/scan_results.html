@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Results — {{ scan.scan_id }}{% endblock %}
+{% block page_title %}Scan Results{% endblock %}
+{% block breadcrumb %}
+  <a href="{{ url_for('scans.list_scans') }}">Scans</a>
+  <span>›</span> <span>{{ scan.scan_id }}</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+  <div>
+    <h1>Scan Results: {{ scan.scan_id }}</h1>
+    <p>Target: <span class="text-mono" style="color:var(--accent-cyan); font-weight:600;">{{ scan.target }}</span> (Assessment: <a href="{{ url_for('assessments.assessment_detail', assessment_id=assessment.id) }}" class="text-accent">{{ assessment.assessment_id }}</a>)</p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <a href="{{ url_for('assessments.assessment_detail', assessment_id=assessment.id) }}" class="btn btn-secondary btn-sm">
+      ← Back to Assessment
+    </a>
+    <a href="{{ url_for('vulnerabilities.list_vulnerabilities', target=scan.target) }}" class="btn btn-primary btn-sm">
+      ⚠️ View Identified Vulnerabilities
+    </a>
+  </div>
+</div>
+
+<!-- Nmap missing error banner if scan failed because of missing Nmap -->
+{% if scan.status == 'Failed' and 'Nmap is not installed' in (scan.error_message or '') %}
+<div class="alert-banner warning" style="margin-bottom: 24px;">
+  <span class="alert-icon">⚠️</span>
+  <div class="alert-content">
+    <div class="alert-title">Nmap Scanner Unavailable</div>
+    <div class="alert-text">
+      {{ scan.error_message }}
+      <div style="margin-top: 8px; font-size:12px; color:var(--text-secondary);">
+        <strong>How to resolve:</strong> Download the Nmap installer from <a href="https://nmap.org/download.html" target="_blank" rel="noopener" style="color:var(--accent-cyan); text-decoration:underline;">nmap.org</a>, run the setup wizard, and ensure Nmap is added to your Windows system <code>PATH</code> (e.g. <code>C:\Program Files (x86)\Nmap</code>).
+      </div>
+    </div>
+  </div>
+</div>
+{% elif scan.status == 'Failed' %}
+<div class="alert-banner error" style="margin-bottom: 24px;">
+  <span class="alert-icon">❌</span>
+  <div class="alert-content">
+    <div class="alert-title">Scan Failed</div>
+    <div class="alert-text">{{ scan.error_message }}</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Scan Summary Cards -->
+<div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+  <div class="stat-card primary">
+    <div class="stat-icon-wrap">🎯</div>
+    <div class="stat-body">
+      <div class="stat-value" style="font-size:16px; font-family:'JetBrains Mono', monospace;">{{ scan.target }}</div>
+      <div class="stat-label">Target Host</div>
+      <div class="stat-sub">Validated network target</div>
+    </div>
+  </div>
+
+  <div class="stat-card {% if scan.status == 'Completed' %}low{% elif scan.status == 'Failed' %}critical{% else %}info{% endif %}">
+    <div class="stat-icon-wrap">
+      {% if scan.status == 'Completed' %}✅{% elif scan.status == 'Failed' %}❌{% else %}⏳{% endif %}
+    </div>
+    <div class="stat-body">
+      <div class="stat-value" style="font-size:18px;">{{ scan.status }}</div>
+      <div class="stat-label">Scan Status</div>
+      <div class="stat-sub">
+        {% if scan.completed_at and scan.started_at %}
+          Duration: {{ "%.1f"|format((scan.completed_at - scan.started_at).total_seconds()) }}s
+        {% else %}
+          —
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-card info">
+    <div class="stat-icon-wrap">🔌</div>
+    <div class="stat-body">
+      <div class="stat-value">{{ services|length }}</div>
+      <div class="stat-label">Discovered Open Ports</div>
+      <div class="stat-sub">Structured service entries</div>
+    </div>
+  </div>
+
+  <div class="stat-card purple">
+    <div class="stat-icon-wrap">⚙️</div>
+    <div class="stat-body">
+      <div class="stat-value" style="font-size:14px; font-family:'JetBrains Mono', monospace;">-sV -T3</div>
+      <div class="stat-label">Scan Profile</div>
+      <div class="stat-sub">Service version detection</div>
+    </div>
+  </div>
+</div>
+
+<!-- Discovered Services Table -->
+<div class="card mb-24">
+  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="card-title">🔌 Discovered Ports & Services</div>
+    <span class="badge badge-info">{{ services|length }} service(s) detected</span>
+  </div>
+  <div class="card-body" style="padding:0;">
+    {% if services %}
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Port</th>
+            <th>Protocol</th>
+            <th>State</th>
+            <th>Service</th>
+            <th>Product</th>
+            <th>Version</th>
+            <th>Extra Info</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for svc in services %}
+          <tr>
+            <td>
+              <span class="text-mono fw-600" style="color:var(--accent-cyan); font-size:14px;">{{ svc.port }}</span>
+            </td>
+            <td>
+              <span class="text-mono text-xs">{{ svc.protocol | upper }}</span>
+            </td>
+            <td>
+              <span class="badge badge-low">{{ svc.state }}</span>
+            </td>
+            <td>
+              <span class="fw-600" style="color:var(--text-primary);">{{ svc.service }}</span>
+            </td>
+            <td>
+              <span class="text-secondary">{{ svc.product or '—' }}</span>
+            </td>
+            <td>
+              <span class="text-mono text-xs text-accent">{{ svc.version or '—' }}</span>
+            </td>
+            <td class="text-muted text-xs">
+              {{ svc.extra_info or '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 40px 20px;">
+      <div class="empty-icon">🔌</div>
+      <h3>No open ports or services discovered</h3>
+      <p style="color:var(--text-muted); font-size:13px; max-width:440px; margin:0 auto;">
+        {% if scan.status == 'Completed' %}
+          The scanner did not find any open services on <strong>{{ scan.target }}</strong> within the probed ports.
+        {% else %}
+          Scan was not completed successfully. Check the raw scanner output below.
+        {% endif %}
+      </p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Raw Nmap Output Expandable Block -->
+<div class="card">
+  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="card-title">📜 Scanner Execution Log & Raw Output</div>
+    <span class="text-mono text-xs text-muted">{{ scan.command_used or 'nmap -sV -T3 ' ~ scan.target }}</span>
+  </div>
+  <div class="card-body">
+    <div class="evidence-block" style="max-height: 380px; overflow-y: auto;">
+      {% if scan.raw_output %}
+{{ scan.raw_output }}
+      {% elif scan.error_message %}
+Scan Execution Error:
+{{ scan.error_message }}
+      {% else %}
+No output recorded for this scan session.
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

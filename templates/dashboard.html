@@ -7,11 +7,11 @@
 {% block content %}
 
 <!-- ============================================================
-     Top Stats Row
+     Top Stats Row 1: Operations & Findings Overview
      ============================================================ -->
-<div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+<div class="stats-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 16px;">
 
-  <!-- Total Assessments -->
+  <!-- 1. Total Assessments -->
   <div class="stat-card primary">
     <div class="stat-icon-wrap">🔍</div>
     <div class="stat-body">
@@ -21,72 +21,98 @@
     </div>
   </div>
 
-  <!-- Total Vulnerabilities -->
+  <!-- 2. Total Scans -->
+  <div class="stat-card purple">
+    <div class="stat-icon-wrap">📡</div>
+    <div class="stat-body">
+      <div class="stat-value" data-target="{{ total_scans }}">{{ total_scans }}</div>
+      <div class="stat-label">Total Scans</div>
+      <div class="stat-sub">{{ completed_scans }} completed</div>
+    </div>
+  </div>
+
+  <!-- 3. Total Findings -->
   <div class="stat-card info">
     <div class="stat-icon-wrap">🐛</div>
     <div class="stat-body">
       <div class="stat-value" data-target="{{ total_vulns }}">{{ total_vulns }}</div>
-      <div class="stat-label">Total Vulnerabilities</div>
-      <div class="stat-sub">{{ confirmed_count }} confirmed</div>
+      <div class="stat-label">Total Findings</div>
+      <div class="stat-sub">{{ needs_review_count }} needs review</div>
     </div>
   </div>
 
-  <!-- Critical -->
+  <!-- 4. Active Findings -->
+  <div class="stat-card high">
+    <div class="stat-icon-wrap">⚡</div>
+    <div class="stat-body">
+      <div class="stat-value text-high" data-target="{{ active_vulns }}">{{ active_vulns }}</div>
+      <div class="stat-label">Active Findings</div>
+      <div class="stat-sub">Excludes false positives</div>
+    </div>
+  </div>
+
+  <!-- 5. Critical -->
   <div class="stat-card critical">
     <div class="stat-icon-wrap">🚨</div>
     <div class="stat-body">
-      <div class="stat-value" data-target="{{ critical_count }}">{{ critical_count }}</div>
+      <div class="stat-value text-critical" data-target="{{ critical_count }}">{{ critical_count }}</div>
       <div class="stat-label">Critical Findings</div>
-      <div class="stat-sub">Immediate attention required</div>
-    </div>
-  </div>
-
-  <!-- High -->
-  <div class="stat-card high">
-    <div class="stat-icon-wrap">🔥</div>
-    <div class="stat-body">
-      <div class="stat-value" data-target="{{ high_count }}">{{ high_count }}</div>
-      <div class="stat-label">High Severity</div>
-      <div class="stat-sub">Address within 24 hours</div>
+      <div class="stat-sub">Immediate SLA action</div>
     </div>
   </div>
 
 </div>
 
-<!-- Second stats row -->
-<div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+<!-- ============================================================
+     Top Stats Row 2: Severity & Validation Breakdown
+     ============================================================ -->
+<div class="stats-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 24px;">
 
-  <div class="stat-card medium">
-    <div class="stat-icon-wrap">⚡</div>
+  <!-- 6. High -->
+  <div class="stat-card high">
+    <div class="stat-icon-wrap">🔥</div>
     <div class="stat-body">
-      <div class="stat-value" data-target="{{ medium_count }}">{{ medium_count }}</div>
+      <div class="stat-value text-high" data-target="{{ high_count }}">{{ high_count }}</div>
+      <div class="stat-label">High Severity</div>
+      <div class="stat-sub">Address within 24 hours</div>
+    </div>
+  </div>
+
+  <!-- 7. Medium -->
+  <div class="stat-card medium">
+    <div class="stat-icon-wrap">🟡</div>
+    <div class="stat-body">
+      <div class="stat-value text-medium" data-target="{{ medium_count }}">{{ medium_count }}</div>
       <div class="stat-label">Medium Severity</div>
       <div class="stat-sub">Address within 7 days</div>
     </div>
   </div>
 
+  <!-- 8. Low & Info -->
   <div class="stat-card low">
     <div class="stat-icon-wrap">✅</div>
     <div class="stat-body">
-      <div class="stat-value" data-target="{{ low_count }}">{{ low_count }}</div>
+      <div class="stat-value text-low" data-target="{{ low_count }}">{{ low_count }}</div>
       <div class="stat-label">Low Severity</div>
-      <div class="stat-sub">Address when possible</div>
+      <div class="stat-sub">{{ info_count }} informational</div>
     </div>
   </div>
 
-  <div class="stat-card purple">
+  <!-- 9. Confirmed Findings -->
+  <div class="stat-card low">
     <div class="stat-icon-wrap">🔎</div>
     <div class="stat-body">
-      <div class="stat-value" data-target="{{ confirmed_count }}">{{ confirmed_count }}</div>
-      <div class="stat-label">Confirmed</div>
-      <div class="stat-sub">Analyst validated</div>
+      <div class="stat-value text-low" data-target="{{ confirmed_count }}">{{ confirmed_count }}</div>
+      <div class="stat-label">Confirmed Findings</div>
+      <div class="stat-sub">Validated true positives</div>
     </div>
   </div>
 
+  <!-- 10. False Positives -->
   <div class="stat-card info">
     <div class="stat-icon-wrap">🚫</div>
     <div class="stat-body">
-      <div class="stat-value" data-target="{{ false_positive_count }}">{{ false_positive_count }}</div>
+      <div class="stat-value text-muted" data-target="{{ false_positive_count }}">{{ false_positive_count }}</div>
       <div class="stat-label">False Positives</div>
       <div class="stat-sub">Marked by analyst</div>
     </div>
@@ -95,23 +121,24 @@
 </div>
 
 <!-- ============================================================
-     Main Dashboard Grid
+     Main Dashboard Grid: Vulnerabilities & Charts
      ============================================================ -->
 <div class="dashboard-grid">
 
-  <!-- Recent Vulnerabilities Table -->
+  <!-- Left: Top Risk Vulnerabilities Table -->
   <div class="card">
     <div class="card-header">
       <div class="card-title">
-        <span class="icon">⚠️</span> Top Risk Vulnerabilities
+        <span class="icon">⚠️</span> Top Priority Active Risks
       </div>
-      <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}" class="card-action">View all →</a>
+      <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}" class="card-action">View all findings →</a>
     </div>
     <div style="overflow-x: auto;">
       {% if recent_vulns %}
       <table class="data-table">
         <thead>
           <tr>
+            <th>Priority</th>
             <th>Vulnerability</th>
             <th>Severity</th>
             <th>Risk Score</th>
@@ -122,15 +149,17 @@
           {% for v in recent_vulns %}
           <tr>
             <td>
+              <span class="badge badge-{{ v.severity | lower }}">P{{ v.priority }}</span>
+            </td>
+            <td>
               <div class="vuln-name">
                 <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=v.id) }}" class="name">
                   {{ v.name }}
                 </a>
-                {% if v.cve_id %}
-                <span class="meta">{{ v.cve_id }}</span>
-                {% elif v.affected_service %}
-                <span class="meta">Port {{ v.affected_port }}/{{ v.affected_protocol }} — {{ v.affected_service }}</span>
-                {% endif %}
+                <span class="meta text-muted text-xs">
+                  Port {{ v.affected_port }}/{{ v.affected_protocol }} — {{ v.affected_service }}
+                  {% if v.cve_id %}| <strong class="text-accent">{{ v.cve_id }}</strong>{% endif %}
+                </span>
               </div>
             </td>
             <td>
@@ -138,7 +167,7 @@
             </td>
             <td>
               <div class="risk-score">
-                <span class="risk-score-value">{{ "%.1f"|format(v.risk_score) }}</span>
+                <span class="risk-score-value text-{{ v.severity | lower }} text-mono">{{ "%.1f"|format(v.risk_score) }}</span>
                 <div class="risk-bar">
                   <div class="risk-bar-fill {{ v.severity | lower }}"
                        data-score="{{ v.risk_score }}"
@@ -154,8 +183,10 @@
                 <span class="badge badge-fp">False Positive</span>
               {% elif v.validation_status == 'Needs Review' %}
                 <span class="badge badge-review">Needs Review</span>
+              {% elif v.validation_status == 'Resolved' %}
+                <span class="badge badge-completed">Resolved</span>
               {% else %}
-                <span class="badge badge-unverified">Unverified</span>
+                <span class="badge badge-pending">{{ v.validation_status }}</span>
               {% endif %}
             </td>
           </tr>
@@ -163,17 +194,19 @@
         </tbody>
       </table>
       {% else %}
-        <div class="empty-state">
+        <div class="empty-state" style="padding:40px 20px;">
           <div class="empty-icon">🛡️</div>
-          <h3>No vulnerabilities yet</h3>
-          <p>Run your first assessment to see findings here.</p>
-          <a href="{{ url_for('assessments.new_assessment') }}" class="btn btn-primary">Start Assessment</a>
+          <h3>No active vulnerabilities detected</h3>
+          <p style="color:var(--text-muted); font-size:13px;">
+            Run a security scan against an authorized target to discover services.
+          </p>
+          <a href="{{ url_for('assessments.new_assessment') }}" class="btn btn-primary btn-sm mt-12">Start Assessment</a>
         </div>
       {% endif %}
     </div>
   </div>
 
-  <!-- Right column -->
+  <!-- Right: Charts Column -->
   <div style="display: flex; flex-direction: column; gap: 20px;">
 
     <!-- Severity Donut Chart -->
@@ -188,7 +221,7 @@
       </div>
     </div>
 
-    <!-- Assessment Status Chart -->
+    <!-- Assessment Status Bar Chart -->
     <div class="card">
       <div class="card-header">
         <div class="card-title"><span class="icon">📋</span> Assessment Status</div>
@@ -202,11 +235,79 @@
 
   </div>
 
+  <!-- Recent Scans Table -->
+  <div class="card full-width">
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="card-title"><span class="icon">📡</span> Recent Security Scans</div>
+      <a href="{{ url_for('scans.list_scans') }}" class="card-action">View all scans →</a>
+    </div>
+    <div style="overflow-x: auto;">
+      {% if recent_scans %}
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Scan ID</th>
+            <th>Target</th>
+            <th>Assessment</th>
+            <th>Status</th>
+            <th>Started</th>
+            <th>Discovered Ports</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in recent_scans %}
+          <tr>
+            <td>
+              <span class="text-mono text-accent fw-600">{{ s.scan_id }}</span>
+            </td>
+            <td>
+              <span class="text-mono" style="color:var(--accent-cyan);">{{ s.target }}</span>
+            </td>
+            <td>
+              <a href="{{ url_for('assessments.assessment_detail', assessment_id=s.assessment_id) }}" style="color:var(--text-primary); font-weight:500;">
+                {{ s.assessment.name }}
+              </a>
+            </td>
+            <td>
+              {% if s.status == 'Completed' %}
+                <span class="badge badge-completed">✅ Completed</span>
+              {% elif s.status == 'Running' %}
+                <span class="badge badge-running">⏳ Running</span>
+              {% elif s.status == 'Failed' %}
+                <span class="badge badge-failed">❌ Failed</span>
+              {% else %}
+                <span class="badge badge-pending">{{ s.status }}</span>
+              {% endif %}
+            </td>
+            <td class="text-muted text-xs">
+              {{ s.started_at.strftime('%d %b %Y, %H:%M') if s.started_at else '—' }}
+            </td>
+            <td>
+              <span class="badge badge-info">{{ s.results.count() }} ports</span>
+            </td>
+            <td>
+              <a href="{{ url_for('scans.scan_detail', scan_id=s.id) }}" class="btn btn-secondary btn-sm">
+                View Results
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="empty-state" style="padding:32px 20px;">
+          <p style="color:var(--text-muted); font-size:13px;">No scans executed yet. Scans run from within an assessment.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
   <!-- Recent Assessments Table -->
   <div class="card full-width">
-    <div class="card-header">
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
       <div class="card-title"><span class="icon">🔍</span> Recent Assessments</div>
-      <a href="{{ url_for('assessments.list_assessments') }}" class="card-action">View all →</a>
+      <a href="{{ url_for('assessments.list_assessments') }}" class="card-action">View all assessments →</a>
     </div>
     <div style="overflow-x: auto;">
       {% if recent_assessments %}
@@ -214,65 +315,58 @@
         <thead>
           <tr>
             <th>Assessment Name</th>
+            <th>Assessment ID</th>
             <th>Target</th>
-            <th>Scan Type</th>
             <th>Status</th>
-            <th>Vulnerabilities</th>
-            <th>Date</th>
+            <th>Created Date</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
           {% for a in recent_assessments %}
           <tr>
             <td>
-              <a href="{{ url_for('assessments.assessment_detail', assessment_id=a.id) }}">
+              <a href="{{ url_for('assessments.assessment_detail', assessment_id=a.id) }}" style="font-weight: 600; color: var(--text-primary);">
                 {{ a.name }}
               </a>
             </td>
             <td>
-              <div style="display:flex; flex-direction:column;">
-                <span style="color: var(--text-primary); font-weight:500;">{{ a.target.name }}</span>
-                <span class="text-mono text-xs text-muted">{{ a.target.ip_address }}</span>
-              </div>
+              <span class="text-mono text-accent fw-600">{{ a.assessment_id }}</span>
             </td>
             <td>
-              <span class="text-mono text-xs text-accent">{{ a.scan_type | upper }}</span>
+              <span class="text-mono text-xs" style="color: var(--accent-cyan);">{{ a.target }}</span>
             </td>
             <td>
-              <span class="badge badge-{{ a.status }}">{{ a.status | capitalize }}</span>
-            </td>
-            <td>
-              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                {% if a.critical_count > 0 %}
-                  <span class="badge badge-critical">{{ a.critical_count }} C</span>
-                {% endif %}
-                {% if a.high_count > 0 %}
-                  <span class="badge badge-high">{{ a.high_count }} H</span>
-                {% endif %}
-                {% if a.medium_count > 0 %}
-                  <span class="badge badge-medium">{{ a.medium_count }} M</span>
-                {% endif %}
-                {% if a.low_count > 0 %}
-                  <span class="badge badge-low">{{ a.low_count }} L</span>
-                {% endif %}
-                {% if a.vulnerability_count == 0 %}
-                  <span class="text-muted text-xs">None detected</span>
-                {% endif %}
-              </div>
+              {% if a.status == 'Created' %}
+                <span class="badge badge-info">Created</span>
+              {% elif a.status == 'Completed' or a.status == 'completed' %}
+                <span class="badge badge-completed">Completed</span>
+              {% elif a.status == 'Running' or a.status == 'running' %}
+                <span class="badge badge-running">Running</span>
+              {% elif a.status == 'Failed' or a.status == 'failed' %}
+                <span class="badge badge-failed">Failed</span>
+              {% else %}
+                <span class="badge badge-pending">{{ a.status }}</span>
+              {% endif %}
             </td>
             <td class="text-muted text-xs">
-              {{ a.created_at.strftime('%d %b %Y, %H:%M') }}
+              {{ a.created_at.strftime('%d %b %Y, %H:%M') if a.created_at else '—' }}
+            </td>
+            <td>
+              <a href="{{ url_for('assessments.assessment_detail', assessment_id=a.id) }}" class="btn btn-secondary btn-sm">
+                View
+              </a>
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
       {% else %}
-        <div class="empty-state">
+        <div class="empty-state" style="padding:32px 20px;">
           <div class="empty-icon">🔍</div>
-          <h3>No assessments yet</h3>
+          <h3>No assessments created yet.</h3>
           <p>Start your first vulnerability assessment to see results here.</p>
-          <a href="{{ url_for('assessments.new_assessment') }}" class="btn btn-primary">New Assessment</a>
+          <a href="{{ url_for('assessments.new_assessment') }}" class="btn btn-primary btn-sm mt-12">➕ New Assessment</a>
         </div>
       {% endif %}
     </div>
@@ -287,15 +381,15 @@
   // Pass server-side data to JS
   const severityData = {{ severity_chart | tojson }};
   const statusData   = {
-    completed: {{ completed_assessments }},
+    created:   {{ created_assessments }},
     running:   {{ running_assessments }},
+    completed: {{ completed_assessments }},
     pending:   {{ pending_assessments }},
     failed:    {{ failed_assessments }},
   };
 
   // Initialise charts after Chart.js loads
   document.addEventListener('DOMContentLoaded', () => {
-    // Slight delay to ensure Chart.js CDN is ready
     setTimeout(() => {
       if (window.ThreatLens) {
         window.ThreatLens.initSeverityChart(severityData);

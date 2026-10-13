@@ -119,10 +119,10 @@ function initStatusChart(statusData) {
   new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['Completed', 'Running', 'Pending', 'Failed'],
+      labels: ['Created', 'Running', 'Completed', 'Failed'],
       datasets: [{
-        data:            [statusData.completed, statusData.running, statusData.pending, statusData.failed],
-        backgroundColor: ['#22c55e', '#3b82f6', '#94a3b8', '#ef4444'],
+        data:            [statusData.created || 0, statusData.running || 0, statusData.completed || 0, statusData.failed || 0],
+        backgroundColor: ['#3b82f6', '#06b6d4', '#22c55e', '#ef4444'],
         borderRadius:    6,
         borderSkipped:   false,
       }],

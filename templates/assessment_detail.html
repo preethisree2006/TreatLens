@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+
+{% block title %}{{ assessment.name }} ({{ assessment.assessment_id }}){% endblock %}
+{% block page_title %}Assessment Details{% endblock %}
+{% block breadcrumb %}
+  <a href="{{ url_for('assessments.list_assessments') }}">Assessments</a>
+  <span>›</span> <span>{{ assessment.assessment_id }}</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+  <div>
+    <h1>{{ assessment.name }}</h1>
+    <p>Assessment ID: <span class="text-mono text-accent fw-600">{{ assessment.assessment_id }}</span></p>
+  </div>
+  <div style="display: flex; gap: 10px; flex-wrap:wrap;">
+    <a href="{{ url_for('assessments.list_assessments') }}" class="btn btn-secondary btn-sm">
+      ← Back to Assessments
+    </a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openScanModal()">
+      📡 Run Security Scan
+    </button>
+    <form action="{{ url_for('reports.generate_report_for_assessment', assessment_id=assessment.id) }}" method="POST" style="display:inline;">
+      <button type="submit" class="btn btn-secondary btn-sm">
+        📄 Generate Report
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Nmap Missing Warning Banner if not installed -->
+{% if not nmap_available %}
+<div class="alert-banner warning" style="margin-bottom: 20px;">
+  <span class="alert-icon">⚠️</span>
+  <div class="alert-content">
+    <div class="alert-title">Nmap Scanner Not Found</div>
+    <div class="alert-text">{{ nmap_error_msg }}</div>
+  </div>
+</div>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start;">
+
+  <!-- Main Column -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+
+    <!-- Card 1: Assessment Information -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📋 Assessment Scope & Target Information</div>
+        <div>
+          {% if assessment.status == 'Created' %}
+            <span class="badge badge-info">Created</span>
+          {% elif assessment.status == 'Completed' or assessment.status == 'completed' %}
+            <span class="badge badge-completed">Completed</span>
+          {% elif assessment.status == 'Running' or assessment.status == 'running' %}
+            <span class="badge badge-running">Running</span>
+          {% elif assessment.status == 'Failed' or assessment.status == 'failed' %}
+            <span class="badge badge-failed">Failed</span>
+          {% else %}
+            <span class="badge badge-pending">{{ assessment.status }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card-body">
+
+        <div class="detail-row">
+          <span class="detail-key">Assessment ID</span>
+          <span class="detail-val text-mono text-accent fw-600">{{ assessment.assessment_id }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-key">Assessment Name</span>
+          <span class="detail-val fw-600" style="color: var(--text-primary);">{{ assessment.name }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-key">Target Host</span>
+          <span class="detail-val text-mono" style="color: var(--accent-cyan); font-weight: 600;">
+            {{ assessment.target }}
+          </span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-key">Description</span>
+          <span class="detail-val" style="color: var(--text-secondary); line-height: 1.6;">
+            {{ assessment.description }}
+          </span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-key">Created Date</span>
+          <span class="detail-val text-muted text-xs">
+            {% if assessment.created_at %}
+              {{ assessment.created_at.strftime('%d %b %Y, %H:%M:%S') }} UTC
+            {% else %}
+              —
+            {% endif %}
+          </span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-key">Last Updated</span>
+          <span class="detail-val text-muted text-xs">
+            {% if assessment.updated_at %}
+              {{ assessment.updated_at.strftime('%d %b %Y, %H:%M:%S') }} UTC
+            {% else %}
+              —
+            {% endif %}
+          </span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Card 2: Scan Management & Execution -->
+    <div class="card">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="card-title">📡 Security Scans</div>
+        <div>
+          <button type="button" class="btn btn-primary btn-sm" onclick="openScanModal()">
+            ➕ Start New Scan
+          </button>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        {% if scans %}
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Scan ID</th>
+              <th>Status</th>
+              <th>Started</th>
+              <th>Duration</th>
+              <th>Services</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in scans %}
+            <tr>
+              <td>
+                <span class="text-mono text-accent fw-600">{{ s.scan_id }}</span>
+              </td>
+              <td>
+                {% if s.status == 'Completed' %}
+                  <span class="badge badge-completed">✅ Completed</span>
+                {% elif s.status == 'Running' %}
+                  <span class="badge badge-running">⏳ Running</span>
+                {% elif s.status == 'Failed' %}
+                  <span class="badge badge-failed">❌ Failed</span>
+                {% else %}
+                  <span class="badge badge-pending">{{ s.status }}</span>
+                {% endif %}
+              </td>
+              <td class="text-muted text-xs">
+                {{ s.started_at.strftime('%d %b %Y, %H:%M:%S') if s.started_at else '—' }}
+              </td>
+              <td class="text-muted text-xs">
+                {% if s.completed_at and s.started_at %}
+                  {{ "%.1f"|format((s.completed_at - s.started_at).total_seconds()) }}s
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge badge-info">{{ s.results.count() }} open</span>
+              </td>
+              <td>
+                <a href="{{ url_for('scans.scan_detail', scan_id=s.id) }}" class="btn btn-secondary btn-sm">
+                  View Results →
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state" style="padding: 40px 20px;">
+          <div class="empty-icon" style="font-size: 38px;">📡</div>
+          <h3 style="color: var(--text-primary); font-size: 16px; margin-bottom: 8px;">No scans executed yet</h3>
+          <p style="color: var(--text-muted); max-width: 440px; margin: 0 auto 20px; line-height: 1.5;">
+            Run a safe, authorized service-discovery scan against <strong>{{ assessment.target }}</strong> using Nmap (<code>-sV -T3</code>).
+          </p>
+          <button type="button" class="btn btn-primary" onclick="openScanModal()">
+            🚀 Start Security Scan
+          </button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Card 3: Vulnerability Findings -->
+    <div class="card">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="card-title">⚠️ Vulnerability Findings (Active Risks)</div>
+        <div style="display:flex; gap:8px;">
+          {% if scans and latest_scan and latest_scan.status == 'Completed' %}
+          <form action="{{ url_for('assessments.run_analysis', assessment_id=assessment.id) }}" method="POST" style="display:inline;">
+            <button type="submit" class="btn btn-secondary btn-sm" title="Re-run analysis engine on latest scan">
+              🔄 Re-analyze Scan
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        {% if findings %}
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Finding</th>
+              <th>Port / Service</th>
+              <th>Severity</th>
+              <th>Risk Score</th>
+              <th>Validation</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in findings %}
+            <tr>
+              <td>
+                <div class="vuln-name">
+                  <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=v.id) }}" class="name">
+                    {{ v.name }}
+                  </a>
+                  {% if v.cve_id %}
+                    <span class="meta text-accent">{{ v.cve_id }}</span>
+                  {% endif %}
+                </div>
+              </td>
+              <td>
+                <span class="text-mono text-xs">
+                  {% if v.affected_port %}
+                    {{ v.affected_port }}/{{ v.affected_protocol }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </span>
+                <span class="text-muted text-xs">({{ v.affected_service or 'service' }})</span>
+              </td>
+              <td>
+                <span class="badge badge-{{ v.severity | lower }}">{{ v.severity }}</span>
+              </td>
+              <td>
+                <span class="risk-score-value text-{{ v.severity | lower }} text-mono fw-600">
+                  {{ "%.1f"|format(v.risk_score) }}
+                </span>
+              </td>
+              <td>
+                {% if v.validation_status == 'Confirmed' %}
+                  <span class="badge badge-confirmed">✅ Confirmed</span>
+                {% elif v.validation_status == 'False Positive' %}
+                  <span class="badge badge-fp">🚫 False Positive</span>
+                {% elif v.validation_status == 'Needs Review' %}
+                  <span class="badge badge-review">🔍 Needs Review</span>
+                {% elif v.validation_status == 'Resolved' %}
+                  <span class="badge badge-completed">✔️ Resolved</span>
+                {% else %}
+                  <span class="badge badge-pending">{{ v.validation_status }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=v.id) }}" class="btn btn-secondary btn-sm">
+                  Review →
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state" style="padding: 30px 20px;">
+          <div class="empty-icon" style="font-size: 32px;">🛡️</div>
+          <h4 style="color: var(--text-primary); margin-bottom: 6px;">No Active Vulnerabilities</h4>
+          <p style="color: var(--text-muted); font-size: 13px;">
+            {% if scans %}
+              The scan discovered no vulnerabilities on open ports, or all findings have been validated/filtered.
+            {% else %}
+              Execute a security scan to detect open ports and evaluate vulnerability indicators.
+            {% endif %}
+          </p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Card 4: False Positives (if any) -->
+    {% if fp_findings %}
+    <div class="card" style="border-color: rgba(148, 163, 184, 0.2);">
+      <div class="card-header">
+        <div class="card-title" style="color: var(--text-muted);">🚫 Excluded False Positives ({{ fp_findings|length }})</div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Finding</th>
+              <th>Port</th>
+              <th>Excluded Reason / Notes</th>
+              <th>Analyst</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for fp in fp_findings %}
+            <tr>
+              <td>
+                <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=fp.id) }}" style="color:var(--text-muted);">
+                  {{ fp.name }}
+                </a>
+              </td>
+              <td class="text-mono text-xs">{{ fp.affected_port }}/{{ fp.affected_protocol }}</td>
+              <td class="text-xs text-muted">{{ fp.validation_notes or 'Marked as false positive during analyst triage.' }}</td>
+              <td class="text-xs">{{ fp.validator_name or 'Analyst' }}</td>
+              <td>
+                <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=fp.id) }}" class="btn btn-secondary btn-sm">
+                  View
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Side Column / Summary -->
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+
+    <!-- Quick Summary Card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">⚡ Session Summary</div>
+      </div>
+      <div class="card-body" style="padding: 16px 20px;">
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">Target Host:</span>
+            <span class="text-mono" style="color: var(--accent-cyan);">{{ assessment.target }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">Database Record:</span>
+            <span class="text-mono text-accent">#{{ assessment.id }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">Total Scans:</span>
+            <span class="text-mono">{{ scans|length }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">Active Findings:</span>
+            <span class="text-mono fw-600 text-{{ 'critical' if findings else 'low' }}">{{ findings|length }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">False Positives:</span>
+            <span class="text-mono text-muted">{{ fp_findings|length }}</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
+          <button type="button" class="btn btn-primary btn-sm" style="width:100%; justify-content:center;" onclick="openScanModal()">
+            📡 Start Scan
+          </button>
+          <a href="{{ url_for('risk.index') }}" class="btn btn-secondary btn-sm" style="width:100%; justify-content:center;">
+            🎯 Risk Matrix
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Safety / Scope Card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🛡️ Scope & Authorization</div>
+      </div>
+      <div class="card-body" style="padding: 16px 20px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+        <p style="margin-bottom:8px;">
+          Target <strong style="color: var(--text-primary);">{{ assessment.target }}</strong> is registered for authorized vulnerability assessment.
+        </p>
+        <p>
+          ThreatLens strictly runs safe service discovery (<code>-sV -T3</code>). No exploitation, brute force, or intrusive testing is ever performed.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Modal: Start Scan Authorization Confirmation -->
+<div id="scanConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+  <div class="card" style="max-width:500px; width:90%; background:var(--bg-secondary); border:1px solid var(--accent-primary); box-shadow: 0 10px 40px rgba(0,0,0,0.6);">
+    <div class="card-header" style="border-bottom:1px solid var(--border);">
+      <div class="card-title" style="color:var(--text-primary); font-size:16px;">
+        🛡️ Authorization Confirmation
+      </div>
+      <button type="button" onclick="closeScanModal()" style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer;">×</button>
+    </div>
+    <form action="{{ url_for('assessments.trigger_scan', assessment_id=assessment.id) }}" method="POST">
+      <div class="card-body" style="padding:20px; font-size:13px; color:var(--text-secondary); line-height:1.6;">
+        <p style="margin-bottom:12px;">
+          You are about to launch a service-discovery scan against:
+        </p>
+        <div style="background:var(--bg-card); padding:12px; border-radius:6px; border:1px solid var(--border); margin-bottom:16px; font-family:'JetBrains Mono', monospace; color:var(--accent-cyan); font-weight:600;">
+          Target: {{ assessment.target }}<br>
+          Command: nmap -sV -T3 {{ assessment.target }}
+        </div>
+        <p style="margin-bottom:16px; color:var(--text-muted); font-size:12px;">
+          ⚠️ <strong>Ethical Notice:</strong> ThreatLens is strictly for authorized security assessments. You must only scan systems you own or have explicit written permission to test.
+        </p>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--text-primary); font-weight:500; font-size:12px; margin-bottom:8px;">
+          <input type="checkbox" id="auth-confirm-check" required>
+          I confirm that I own or have authorization to scan this target.
+        </label>
+      </div>
+      <div style="padding:16px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeScanModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm" id="btn-modal-start-scan">
+          🚀 Confirm & Start Scan
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openScanModal() {
+  const modal = document.getElementById('scanConfirmModal');
+  modal.style.display = 'flex';
+}
+function closeScanModal() {
+  const modal = document.getElementById('scanConfirmModal');
+  modal.style.display = 'none';
+}
+</script>
+
+{% endblock %}

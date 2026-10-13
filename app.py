@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent
 # Application Factory
 # ---------------------------------------------------------------------------
 
-def create_app():
+def create_app(config_name=None):
     app = Flask(__name__)
 
     # --- Configuration ---
@@ -33,7 +33,7 @@ def create_app():
     db_path = BASE_DIR / 'database' / 'database.db'
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['APP_VERSION'] = '1.0.0 — Phase 1'
+    app.config['APP_VERSION'] = '1.0.0 — Phase 3'
     app.config['APP_NAME'] = 'ThreatLens — Vulnerability Assessment System'
 
     # --- Initialize Database ---
@@ -42,12 +42,16 @@ def create_app():
     # --- Register Blueprints ---
     from routes.dashboard import dashboard_bp
     from routes.assessments import assessments_bp
+    from routes.scans import scans_bp
     from routes.vulnerabilities import vulnerabilities_bp
+    from routes.risk import risk_bp
     from routes.reports import reports_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(assessments_bp)
+    app.register_blueprint(scans_bp)
     app.register_blueprint(vulnerabilities_bp)
+    app.register_blueprint(risk_bp)
     app.register_blueprint(reports_bp)
 
     # --- Create tables on first run ---
@@ -83,7 +87,7 @@ app = create_app()
 if __name__ == '__main__':
     print("=" * 60)
     print("  ThreatLens — Vulnerability Assessment System")
-    print("  Phase 1 — Project Setup & Dashboard")
+    print("  Phase 3 — Controlled Vulnerability Scanning")
     print("=" * 60)
     print("  Running at: http://127.0.0.1:5000")
     print("  Press Ctrl+C to stop the server.")

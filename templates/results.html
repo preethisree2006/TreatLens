@@ -1,136 +1,246 @@
 {% extends "base.html" %}
 
 {% block title %}Vulnerabilities{% endblock %}
-{% block page_title %}Vulnerability Results{% endblock %}
+{% block page_title %}Vulnerability Findings{% endblock %}
 {% block breadcrumb %}<span>Vulnerabilities</span>{% endblock %}
 
 {% block content %}
 
-<div class="page-header">
-  <h1>Vulnerability Findings</h1>
-  <p>All detected vulnerabilities across all assessments. Use the filters below to narrow results.</p>
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+  <div>
+    <h1>Vulnerability Findings</h1>
+    <p>Comprehensive register of detected vulnerability indicators. Review and validate findings below.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('risk.index') }}" class="btn btn-secondary btn-sm">
+      🎯 Risk Matrix &amp; Prioritization →
+    </a>
+  </div>
 </div>
 
-<!-- Filter Bar -->
-<div class="filter-bar">
-  <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}"
-     class="filter-btn {% if severity_filter == 'all' %}active{% endif %}">
-    All <span class="filter-count">{{ counts.all }}</span>
-  </a>
-  <a href="{{ url_for('vulnerabilities.list_vulnerabilities', severity='critical') }}"
-     class="filter-btn {% if severity_filter == 'critical' %}active-critical{% endif %}">
-    🚨 Critical <span class="filter-count">{{ counts.critical }}</span>
-  </a>
-  <a href="{{ url_for('vulnerabilities.list_vulnerabilities', severity='high') }}"
-     class="filter-btn {% if severity_filter == 'high' %}active-high{% endif %}">
-    🔥 High <span class="filter-count">{{ counts.high }}</span>
-  </a>
-  <a href="{{ url_for('vulnerabilities.list_vulnerabilities', severity='medium') }}"
-     class="filter-btn {% if severity_filter == 'medium' %}active-medium{% endif %}">
-    ⚡ Medium <span class="filter-count">{{ counts.medium }}</span>
-  </a>
-  <a href="{{ url_for('vulnerabilities.list_vulnerabilities', severity='low') }}"
-     class="filter-btn {% if severity_filter == 'low' %}active-low{% endif %}">
-    ✅ Low <span class="filter-count">{{ counts.low }}</span>
-  </a>
+<!-- Header Statistics Badges -->
+<div class="stats-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 20px;">
+  <div class="stat-card primary">
+    <div class="stat-body">
+      <div class="stat-value">{{ counts.total }}</div>
+      <div class="stat-label">Total Findings</div>
+      <div class="stat-sub">{{ counts.active }} active (non-FP)</div>
+    </div>
+  </div>
+  <div class="stat-card critical">
+    <div class="stat-body">
+      <div class="stat-value text-critical">{{ counts.critical }}</div>
+      <div class="stat-label">Critical</div>
+      <div class="stat-sub">Immediate action</div>
+    </div>
+  </div>
+  <div class="stat-card high">
+    <div class="stat-body">
+      <div class="stat-value text-high">{{ counts.high }}</div>
+      <div class="stat-label">High</div>
+      <div class="stat-sub">Fix within 24h</div>
+    </div>
+  </div>
+  <div class="stat-card medium">
+    <div class="stat-body">
+      <div class="stat-value text-medium">{{ counts.medium }}</div>
+      <div class="stat-label">Medium</div>
+      <div class="stat-sub">Fix within 7d</div>
+    </div>
+  </div>
+  <div class="stat-card low">
+    <div class="stat-body">
+      <div class="stat-value text-low">{{ counts.low }}</div>
+      <div class="stat-label">Low &amp; Info</div>
+      <div class="stat-sub">{{ counts.informational }} Informational</div>
+    </div>
+  </div>
+</div>
+
+<div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;">
+  <div class="stat-card purple">
+    <div class="stat-body">
+      <div class="stat-value">{{ counts.needs_review }}</div>
+      <div class="stat-label">🔍 Needs Review</div>
+      <div class="stat-sub">Awaiting analyst triage</div>
+    </div>
+  </div>
+  <div class="stat-card low">
+    <div class="stat-body">
+      <div class="stat-value text-low">{{ counts.confirmed }}</div>
+      <div class="stat-label">✅ Confirmed</div>
+      <div class="stat-sub">Validated true positives</div>
+    </div>
+  </div>
+  <div class="stat-card info">
+    <div class="stat-body">
+      <div class="stat-value text-muted">{{ counts.false_positive }}</div>
+      <div class="stat-label">🚫 False Positives</div>
+      <div class="stat-sub">Excluded from active risk</div>
+    </div>
+  </div>
+</div>
+
+<!-- Search & Multi-Filter Controls Bar -->
+<div class="card mb-24" style="padding: 16px 20px;">
+  <form method="GET" action="{{ url_for('vulnerabilities.list_vulnerabilities') }}" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
+    
+    <!-- Search Box -->
+    <div style="flex: 1; min-width: 220px;">
+      <input type="text" name="q" value="{{ search_query }}" placeholder="🔍 Search name, CVE, service, keyword..." class="form-control" style="width:100%; height:38px; font-size:13px;">
+    </div>
+
+    <!-- Severity Filter -->
+    <div style="min-width: 140px;">
+      <select name="severity" class="form-control" style="height:38px; font-size:13px;" onchange="this.form.submit()">
+        <option value="all" {% if severity_filter == 'all' %}selected{% endif %}>Severity: All</option>
+        <option value="critical" {% if severity_filter == 'critical' %}selected{% endif %}>Critical</option>
+        <option value="high" {% if severity_filter == 'high' %}selected{% endif %}>High</option>
+        <option value="medium" {% if severity_filter == 'medium' %}selected{% endif %}>Medium</option>
+        <option value="low" {% if severity_filter == 'low' %}selected{% endif %}>Low</option>
+        <option value="informational" {% if severity_filter == 'informational' %}selected{% endif %}>Informational</option>
+      </select>
+    </div>
+
+    <!-- Status Filter -->
+    <div style="min-width: 150px;">
+      <select name="status" class="form-control" style="height:38px; font-size:13px;" onchange="this.form.submit()">
+        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Status: All</option>
+        <option value="needs_review" {% if status_filter == 'needs_review' %}selected{% endif %}>Needs Review</option>
+        <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+        <option value="false_positive" {% if status_filter == 'false_positive' %}selected{% endif %}>False Positive</option>
+        <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Resolved</option>
+      </select>
+    </div>
+
+    <!-- Target Filter -->
+    {% if all_targets %}
+    <div style="min-width: 140px;">
+      <select name="target" class="form-control" style="height:38px; font-size:13px;" onchange="this.form.submit()">
+        <option value="" {% if not target_filter %}selected{% endif %}>Target: All</option>
+        {% for t in all_targets %}
+          <option value="{{ t }}" {% if target_filter == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+
+    <div style="display:flex; gap:8px;">
+      <button type="submit" class="btn btn-primary btn-sm" style="height:38px; padding: 0 16px;">Filter</button>
+      <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}" class="btn btn-secondary btn-sm" style="height:38px; padding: 0 12px; display:flex; align-items:center;">Reset</a>
+    </div>
+
+  </form>
 </div>
 
 <!-- Vulnerabilities Table -->
 <div class="card">
-  <div style="overflow-x: auto;">
+  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="card-title">🛡️ Findings List ({{ vulnerabilities|length }})</div>
+    <span class="text-xs text-muted">Ordered by Priority (P1 → P5) &amp; Risk Score</span>
+  </div>
+  <div class="card-body" style="padding:0;">
     {% if vulnerabilities %}
-    <table class="data-table" id="vuln-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Vulnerability</th>
-          <th>Target / Port</th>
-          <th>Severity</th>
-          <th>Risk Score</th>
-          <th>CVE ID</th>
-          <th>Validation</th>
-          <th>Source</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for v in vulnerabilities %}
-        <tr>
-          <td class="text-muted text-mono text-xs">{{ v.id }}</td>
-          <td>
-            <div class="vuln-name">
-              <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=v.id) }}" class="name">
-                {{ v.name }}
-              </a>
-              {% if v.affected_service %}
-              <span class="meta">
-                Port {{ v.affected_port }}/{{ v.affected_protocol }} — {{ v.affected_service }}
-              </span>
-              {% endif %}
-            </div>
-          </td>
-          <td>
-            <div style="display: flex; flex-direction: column;">
-              <span style="font-weight:500; color:var(--text-primary); font-size:12px;">
-                {{ v.assessment.target.name }}
-              </span>
-              <span class="text-mono text-xs text-accent">{{ v.assessment.target.ip_address }}</span>
-            </div>
-          </td>
-          <td>
-            <span class="badge badge-{{ v.severity | lower }}">{{ v.severity }}</span>
-          </td>
-          <td>
-            <div class="risk-score">
-              <span class="risk-score-value text-{{ v.severity | lower }}">{{ "%.1f"|format(v.risk_score) }}</span>
-              <div class="risk-bar">
-                <div class="risk-bar-fill {{ v.severity | lower }}"
-                     style="width: {{ (v.risk_score / 10 * 100)|round }}%;">
+    <div style="overflow-x: auto;">
+      <table class="data-table" id="vuln-table">
+        <thead>
+          <tr>
+            <th>Finding</th>
+            <th>Severity</th>
+            <th>Risk Score</th>
+            <th>CVE</th>
+            <th>Target</th>
+            <th>Port</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in vulnerabilities %}
+          <tr {% if v.is_false_positive %}style="opacity:0.65; background:rgba(255,255,255,0.01);"{% endif %}>
+            <td>
+              <div class="vuln-name">
+                <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=v.id) }}" class="name">
+                  {{ v.name }}
+                </a>
+                <span class="meta text-muted text-xs">
+                  {{ v.finding_id or ('VULN-' ~ v.id) }} — {{ v.affected_service or 'service' }}
+                </span>
+              </div>
+            </td>
+            <td>
+              <span class="badge badge-{{ v.severity | lower }}">{{ v.severity }}</span>
+            </td>
+            <td>
+              <div class="risk-score">
+                <span class="risk-score-value text-{{ v.severity | lower }} text-mono">{{ "%.1f"|format(v.risk_score) }}</span>
+                <div class="risk-bar">
+                  <div class="risk-bar-fill {{ v.severity | lower }}"
+                       style="width: {{ (v.risk_score / 10 * 100)|round }}%;">
+                  </div>
                 </div>
               </div>
-            </div>
-          </td>
-          <td>
-            {% if v.cve_id %}
-              <a href="https://nvd.nist.gov/vuln/detail/{{ v.cve_id }}"
-                 target="_blank" rel="noopener"
-                 class="cve-tag">{{ v.cve_id }}</a>
-            {% else %}
-              <span class="text-muted text-xs">—</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if v.validation_status == 'Confirmed' %}
-              <span class="badge badge-confirmed">✅ Confirmed</span>
-            {% elif v.validation_status == 'False Positive' %}
-              <span class="badge badge-fp">🚫 False Positive</span>
-            {% elif v.validation_status == 'Needs Review' %}
-              <span class="badge badge-review">🔍 Needs Review</span>
-            {% else %}
-              <span class="badge badge-unverified">❓ Unverified</span>
-            {% endif %}
-          </td>
-          <td>
-            <span class="text-mono text-xs" style="color:var(--text-muted);">{{ v.source | upper }}</span>
-          </td>
-          <td>
-            <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=v.id) }}"
-               class="btn btn-secondary btn-sm">Details</a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            </td>
+            <td>
+              {% if v.cve_id %}
+                <a href="https://nvd.nist.gov/vuln/detail/{{ v.cve_id }}"
+                   target="_blank" rel="noopener"
+                   class="cve-tag">{{ v.cve_id }}</a>
+              {% else %}
+                <span class="text-muted text-xs">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="text-mono text-xs" style="color:var(--accent-cyan); font-weight:500;">
+                {{ v.assessment.target if v.assessment else '—' }}
+              </span>
+            </td>
+            <td>
+              <span class="text-mono text-xs">
+                {% if v.affected_port %}
+                  {{ v.affected_port }}/{{ v.affected_protocol }}
+                {% else %}
+                  —
+                {% endif %}
+              </span>
+            </td>
+            <td>
+              {% if v.validation_status == 'Confirmed' %}
+                <span class="badge badge-confirmed">✅ Confirmed</span>
+              {% elif v.validation_status == 'False Positive' %}
+                <span class="badge badge-fp">🚫 False Positive</span>
+              {% elif v.validation_status == 'Needs Review' %}
+                <span class="badge badge-review">🔍 Needs Review</span>
+              {% elif v.validation_status == 'Resolved' %}
+                <span class="badge badge-completed">✔️ Resolved</span>
+              {% else %}
+                <span class="badge badge-pending">{{ v.validation_status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=v.id) }}"
+                 class="btn btn-secondary btn-sm">Review →</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     {% else %}
-      <div class="empty-state">
+      <div class="empty-state" style="padding:48px 20px;">
         <div class="empty-icon">🛡️</div>
-        <h3>No vulnerabilities found</h3>
-        {% if severity_filter != 'all' %}
-          <p>No {{ severity_filter }} severity vulnerabilities detected.</p>
-          <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}" class="btn btn-secondary">Clear Filter</a>
+        <h3>No vulnerabilities found matching criteria</h3>
+        <p style="color:var(--text-muted); max-width:440px; margin:0 auto 16px;">
+          {% if search_query or severity_filter != 'all' or status_filter != 'all' or target_filter %}
+            No findings match your active filters. Try clearing your search parameters.
+          {% else %}
+            No vulnerability findings recorded yet. Execute an authorized security scan to assess target services.
+          {% endif %}
+        </p>
+        {% if search_query or severity_filter != 'all' or status_filter != 'all' or target_filter %}
+          <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}" class="btn btn-secondary">Clear Filters</a>
         {% else %}
-          <p>Run an assessment to detect vulnerabilities.</p>
-          <a href="{{ url_for('assessments.new_assessment') }}" class="btn btn-primary">New Assessment</a>
+          <a href="{{ url_for('assessments.new_assessment') }}" class="btn btn-primary">➕ Start Assessment</a>
         {% endif %}
       </div>
     {% endif %}

@@ -1,126 +1,144 @@
 {% extends "base.html" %}
 
-{% block title %}Reports{% endblock %}
+{% block title %}Security Reports{% endblock %}
 {% block page_title %}Security Reports{% endblock %}
 {% block breadcrumb %}<span>Reports</span>{% endblock %}
 
 {% block content %}
 
-<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
   <div>
     <h1>Security Assessment Reports</h1>
-    <p>Download and manage generated PDF vulnerability assessment reports.</p>
+    <p>Generate and download professional, publication-ready PDF vulnerability assessment reports.</p>
   </div>
 </div>
 
-<!-- Phase Notice -->
-<div class="alert-banner info" style="margin-bottom: 24px;">
-  <span class="alert-icon">ℹ️</span>
-  <div class="alert-content">
-    <div class="alert-title">Phase 8 — PDF Report Generation</div>
-    <div class="alert-text">
-      Automated PDF report generation will be implemented in Phase 8. The report will include an Executive Summary,
-      Detailed Findings, CVE Information, Risk Scores, and Remediation Recommendations — all formatted professionally.
-    </div>
-  </div>
-</div>
-
-<!-- Generate Report Form (placeholder) -->
-<div style="display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start;">
+<!-- Generate Report Form -->
+<div style="display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; margin-bottom: 24px;">
 
   <div class="card">
     <div class="card-header">
-      <div class="card-title">📄 Generate New Report</div>
+      <div class="card-title">📄 Generate New PDF Security Report</div>
     </div>
     <div class="card-body">
 
-      <div class="form-group">
-        <label class="form-label" for="report-assessment">Select Assessment</label>
-        <select id="report-assessment" class="form-control">
-          <option value="">— Choose completed assessment —</option>
-          {% for a in assessments %}
-          <option value="{{ a.id }}">{{ a.name }} — {{ a.target.ip_address }} ({{ a.vulnerability_count }} findings)</option>
-          {% endfor %}
-        </select>
-      </div>
+      <form action="{{ url_for('reports.generate_report_for_assessment') }}" method="POST">
 
-      <div class="form-group">
-        <label class="form-label" for="report-type">Report Type</label>
-        <select id="report-type" class="form-control">
-          <option value="full">Full Assessment Report</option>
-          <option value="executive">Executive Summary Only</option>
-          <option value="technical">Technical Findings Only</option>
-        </select>
-      </div>
+        <div class="form-group mb-16">
+          <label class="form-label" for="assessment_id">Select Assessment <span style="color:var(--critical);">*</span></label>
+          <select name="assessment_id" id="assessment_id" class="form-control" required style="font-size:13px;">
+            <option value="">— Select an Assessment Scope —</option>
+            {% for a in assessments %}
+            <option value="{{ a.id }}">
+              {{ a.assessment_id }} — {{ a.name }} (Target: {{ a.target }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
 
-      <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="alert('Phase 8: PDF generation coming soon!')">
-        📥 Generate PDF Report
-      </button>
+        <div class="form-group mb-20">
+          <label class="form-label" for="report_type">Report Profile</label>
+          <select name="report_type" id="report_type" class="form-control" style="font-size:13px;">
+            <option value="full">Full Assessment &amp; Risk Report (Comprehensive)</option>
+            <option value="executive">Executive Summary &amp; Posture Only</option>
+            <option value="technical">Technical Findings &amp; Scan Evidence Only</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; height:42px;">
+          📥 Generate PDF Report (ReportLab)
+        </button>
+
+      </form>
 
     </div>
   </div>
 
-  <!-- Report Structure Preview -->
+  <!-- Report Structure Card -->
   <div class="card">
     <div class="card-header">
-      <div class="card-title">📑 Report Contents</div>
+      <div class="card-title">📑 Report Sections Included</div>
     </div>
     <div class="card-body" style="padding: 16px 20px;">
       <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--text-secondary);">
-        <div>📌 Executive Summary</div>
-        <div>🎯 Target Information</div>
-        <div>📅 Assessment Date &amp; Scope</div>
-        <div>📊 Vulnerability Statistics</div>
-        <div>🚨 Critical Findings</div>
-        <div>🔥 High Severity Findings</div>
-        <div>⚡ Medium Severity Findings</div>
-        <div>✅ Low Severity Findings</div>
-        <div>🔍 Detailed Findings with Evidence</div>
-        <div>🛠️ Remediation Recommendations</div>
-        <div>📈 Overall Risk Summary</div>
+        <div>🛡️ <strong>Cover Page:</strong> ThreatLens title &amp; metadata</div>
+        <div>📌 <strong>Executive Summary:</strong> Assessment overview</div>
+        <div>🎯 <strong>Target Scope:</strong> Host, date, methodology</div>
+        <div>📡 <strong>Scan Summary:</strong> Discovered open ports &amp; services</div>
+        <div>📊 <strong>Risk Summary:</strong> Severity &amp; Priority breakdown</div>
+        <div>⚠️ <strong>Detailed Findings:</strong> Evidence, CVE, risk score</div>
+        <div>🚫 <strong>False Positives:</strong> Separately audited items</div>
+        <div>🛠️ <strong>Remediation:</strong> Actionable fix recommendations</div>
+        <div>📈 <strong>Final Security Posture:</strong> Overall system rating</div>
       </div>
     </div>
   </div>
 
 </div>
 
-<!-- Existing Reports -->
-{% if reports %}
-<div class="card mt-24">
-  <div class="card-header">
-    <div class="card-title">📂 Generated Reports</div>
+<!-- Existing Generated Reports -->
+<div class="card">
+  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="card-title">📂 Generated Reports Archive ({{ reports|length }})</div>
+    <span class="text-xs text-muted">Stored securely in reports/generated/</span>
   </div>
-  <div style="overflow-x: auto;">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Report</th>
-          <th>Assessment</th>
-          <th>Generated</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in reports %}
-        <tr>
-          <td class="text-mono text-xs">{{ r.filename }}</td>
-          <td>{{ r.assessment.name }}</td>
-          <td class="text-muted text-xs">{{ r.generated_at.strftime('%d %b %Y, %H:%M') }}</td>
-          <td><a href="#" class="btn btn-secondary btn-sm">📥 Download</a></td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="card-body" style="padding:0;">
+    {% if reports %}
+    <div style="overflow-x: auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Report Filename</th>
+            <th>Assessment</th>
+            <th>Target</th>
+            <th>Generated (UTC)</th>
+            <th>Type</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reports %}
+          <tr>
+            <td>
+              <span class="text-mono text-xs text-accent fw-600">{{ r.filename }}</span>
+            </td>
+            <td>
+              <a href="{{ url_for('assessments.assessment_detail', assessment_id=r.assessment_id) }}" style="font-weight:500; color:var(--text-primary);">
+                {{ r.assessment.name if r.assessment else '—' }}
+              </a>
+              <div class="text-mono text-muted text-xs">{{ r.assessment.assessment_id if r.assessment else '' }}</div>
+            </td>
+            <td>
+              <span class="text-mono text-xs" style="color:var(--accent-cyan);">
+                {{ r.assessment.target if r.assessment else '—' }}
+              </span>
+            </td>
+            <td class="text-muted text-xs">
+              {{ r.generated_at.strftime('%d %b %Y, %H:%M:%S') if r.generated_at else '—' }}
+            </td>
+            <td>
+              <span class="badge badge-info">{{ r.report_type | upper }}</span>
+            </td>
+            <td>
+              <a href="{{ url_for('reports.download_report', report_id=r.id) }}" class="btn btn-secondary btn-sm">
+                📥 Download PDF
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:48px 20px;">
+      <div class="empty-icon">📄</div>
+      <h3>No reports generated yet</h3>
+      <p style="color:var(--text-muted); max-width:440px; margin:0 auto 16px;">
+        Select an assessment above and click "Generate PDF Report" to compile a report.
+      </p>
+    </div>
+    {% endif %}
   </div>
 </div>
-{% else %}
-<div class="card mt-24">
-  <div class="empty-state">
-    <div class="empty-icon">📄</div>
-    <h3>No reports generated yet</h3>
-    <p>Complete an assessment and generate a PDF report to see it here.</p>
-  </div>
-</div>
-{% endif %}
 
 {% endblock %}

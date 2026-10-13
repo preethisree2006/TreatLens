@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Assessment & Prioritization{% endblock %}
+{% block page_title %}Risk Assessment & Prioritization{% endblock %}
+{% block breadcrumb %}<span>Risk Assessment</span>{% endblock %}
+
+{% block content %}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+  <div>
+    <h1>Risk Assessment &amp; Prioritization</h1>
+    <p>Prioritized action matrix based on Likelihood × Impact calculations and remediation SLA urgency.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('reports.list_reports') }}" class="btn btn-secondary btn-sm">
+      📄 Generate Executive Report →
+    </a>
+  </div>
+</div>
+
+<!-- Prioritization Summary Banner -->
+<div class="alert-banner info" style="margin-bottom: 24px;">
+  <span class="alert-icon">⚡</span>
+  <div class="alert-content">
+    <div class="alert-title">Risk Remediation Rule</div>
+    <div class="alert-text">
+      <strong>Highest priority issues should be addressed first.</strong>
+      False positives are strictly excluded from the active risk score and this prioritization matrix.
+      Risk Score formula: <code>Risk Score = (Likelihood × Impact) / 10.0</code> (blended with CVSS score when available).
+    </div>
+  </div>
+</div>
+
+<!-- Priority Breakdown Cards (P1 to P5) -->
+<div class="stats-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 24px;">
+  <div class="stat-card critical">
+    <div class="stat-body">
+      <div class="stat-value text-critical">{{ counts.p1 }}</div>
+      <div class="stat-label">🔴 P1 — Critical</div>
+      <div class="stat-sub">Immediate (SLA: Immediate)</div>
+    </div>
+  </div>
+
+  <div class="stat-card high">
+    <div class="stat-body">
+      <div class="stat-value text-high">{{ counts.p2 }}</div>
+      <div class="stat-label">🟠 P2 — High</div>
+      <div class="stat-sub">Remediate &le; 24 Hours</div>
+    </div>
+  </div>
+
+  <div class="stat-card medium">
+    <div class="stat-body">
+      <div class="stat-value text-medium">{{ counts.p3 }}</div>
+      <div class="stat-label">🟡 P3 — Medium</div>
+      <div class="stat-sub">Remediate &le; 7 Days</div>
+    </div>
+  </div>
+
+  <div class="stat-card low">
+    <div class="stat-body">
+      <div class="stat-value text-low">{{ counts.p4 }}</div>
+      <div class="stat-label">🟢 P4 — Low</div>
+      <div class="stat-sub">Remediate &le; 30 Days</div>
+    </div>
+  </div>
+
+  <div class="stat-card info">
+    <div class="stat-body">
+      <div class="stat-value text-muted">{{ counts.p5 }}</div>
+      <div class="stat-label">⚪ P5 — Informational</div>
+      <div class="stat-sub">Review When Possible</div>
+    </div>
+  </div>
+</div>
+
+<!-- Prioritized Findings Table -->
+<div class="card">
+  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="card-title">🎯 Active Risk Matrix ({{ findings|length }} Findings)</div>
+    <span class="text-xs text-muted">Excludes False Positives</span>
+  </div>
+  <div class="card-body" style="padding:0;">
+    {% if findings %}
+    <div style="overflow-x: auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Finding</th>
+            <th>Severity</th>
+            <th>Risk Score</th>
+            <th>Target</th>
+            <th>Status</th>
+            <th>Remediation Priority</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in findings %}
+          <tr>
+            <td>
+              <span class="badge badge-{{ f.severity | lower }}" style="font-weight:700;">
+                P{{ f.priority }}
+              </span>
+            </td>
+            <td>
+              <div class="vuln-name">
+                <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=f.id) }}" class="name">
+                  {{ f.name }}
+                </a>
+                <span class="meta text-muted text-xs">
+                  Port {{ f.affected_port }}/{{ f.affected_protocol }} — {{ f.affected_service }}
+                  {% if f.cve_id %}| <strong class="text-accent">{{ f.cve_id }}</strong>{% endif %}
+                </span>
+              </div>
+            </td>
+            <td>
+              <span class="badge badge-{{ f.severity | lower }}">{{ f.severity }}</span>
+            </td>
+            <td>
+              <div class="risk-score">
+                <span class="risk-score-value text-{{ f.severity | lower }} text-mono">{{ "%.1f"|format(f.risk_score) }}</span>
+                <div class="risk-bar">
+                  <div class="risk-bar-fill {{ f.severity | lower }}"
+                       style="width: {{ (f.risk_score / 10 * 100)|round }}%;">
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="text-mono text-xs" style="color:var(--accent-cyan); font-weight:500;">
+                {{ f.assessment.target if f.assessment else '—' }}
+              </span>
+            </td>
+            <td>
+              {% if f.validation_status == 'Confirmed' %}
+                <span class="badge badge-confirmed">✅ Confirmed</span>
+              {% elif f.validation_status == 'Needs Review' %}
+                <span class="badge badge-review">🔍 Needs Review</span>
+              {% elif f.validation_status == 'Resolved' %}
+                <span class="badge badge-completed">✔️ Resolved</span>
+              {% else %}
+                <span class="badge badge-pending">{{ f.validation_status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="fw-600 text-xs" style="color:var(--text-primary);">
+                {{ f.remediation_priority or ('P' ~ f.priority ~ ' Remediation') }}
+              </span>
+              <div class="text-muted text-xs">SLA: {{ f.sla_timeline }}</div>
+            </td>
+            <td>
+              <a href="{{ url_for('vulnerabilities.vulnerability_detail', vuln_id=f.id) }}" class="btn btn-secondary btn-sm">
+                Remediate →
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 48px 20px;">
+      <div class="empty-icon">🛡️</div>
+      <h3>No active risks detected</h3>
+      <p style="color:var(--text-muted); max-width:440px; margin:0 auto 16px;">
+        All targets have zero active vulnerabilities, or detected items have been validated as false positives.
+      </p>
+      <a href="{{ url_for('assessments.new_assessment') }}" class="btn btn-primary">➕ Start Assessment</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

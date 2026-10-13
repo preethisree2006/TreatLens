@@ -59,7 +59,7 @@
         <div class="logo-icon">🛡️</div>
         <div class="logo-text">
           <span class="logo-name">ThreatLens</span>
-          <span class="logo-version">v1.0 — Phase 1</span>
+          <span class="logo-version">v1.0 — Phase 3</span>
         </div>
       </div>
 
@@ -88,13 +88,25 @@
           Assessments
         </a>
 
-        <div class="nav-section-label">Findings</div>
+        <a href="{{ url_for('scans.list_scans') }}"
+          class="nav-item {% if active_page == 'scans' %}active{% endif %}" id="nav-scans">
+          <span class="nav-icon">📡</span>
+          Scans
+        </a>
+
+        <div class="nav-section-label">Analysis & Risk</div>
 
         <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}"
           class="nav-item {% if active_page == 'vulnerabilities' %}active{% endif %}" id="nav-vulnerabilities">
           <span class="nav-icon">⚠️</span>
           Vulnerabilities
           <span class="nav-badge" id="critical-nav-count">—</span>
+        </a>
+
+        <a href="{{ url_for('risk.index') }}"
+          class="nav-item {% if active_page == 'risk' %}active{% endif %}" id="nav-risk">
+          <span class="nav-icon">🎯</span>
+          Risk Assessment
         </a>
 
         <div class="nav-section-label">Output</div>
