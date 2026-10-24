@@ -156,6 +156,7 @@ class Scan(db.Model):
     # Relationships
     assessment     = db.relationship('Assessment', back_populates='scans')
     results        = db.relationship('ScanResult', back_populates='scan', cascade='all, delete-orphan', lazy='dynamic')
+    vulnerabilities = db.relationship('Vulnerability', back_populates='scan', cascade='all, delete-orphan', lazy='dynamic')
 
     def __repr__(self):
         return f'<Scan {self.scan_id} on {self.target} [{self.status}]>'
@@ -246,6 +247,8 @@ class Vulnerability(db.Model):
     id                 = db.Column(db.Integer, primary_key=True, autoincrement=True)
     finding_id         = db.Column(db.String(32), unique=True, nullable=True, index=True)
     assessment_id      = db.Column(db.Integer, db.ForeignKey('assessments.id'), nullable=False)
+    scan_id            = db.Column(db.Integer, db.ForeignKey('scans.id'), nullable=True, index=True)
+    affected_host      = db.Column(db.String(128), default='')
     name               = db.Column(db.String(256), nullable=False)
     description        = db.Column(db.Text, default='')
     severity           = db.Column(db.String(32), default=SEV_MEDIUM)
@@ -281,6 +284,7 @@ class Vulnerability(db.Model):
 
     # Relationships
     assessment         = db.relationship('Assessment', back_populates='vulnerabilities')
+    scan               = db.relationship('Scan', back_populates='vulnerabilities')
     validation_records = db.relationship('ValidationRecord', back_populates='vulnerability', cascade='all, delete-orphan', lazy='dynamic')
 
     def __repr__(self):
@@ -313,6 +317,8 @@ class Vulnerability(db.Model):
             'id': self.id,
             'finding_id': self.finding_id or f'VULN-{self.id}',
             'assessment_id': self.assessment_id,
+            'scan_id': self.scan_id,
+            'affected_host': self.affected_host,
             'name': self.name,
             'description': self.description,
             'severity': self.severity,
@@ -321,6 +327,9 @@ class Vulnerability(db.Model):
             'cve_id': self.cve_id,
             'affected_port': self.affected_port,
             'affected_service': self.affected_service,
+            'affected_protocol': self.affected_protocol,
+            'product': self.product,
+            'version': self.version,
             'evidence': self.evidence,
             'remediation': self.remediation,
             'validation_status': self.validation_status,
@@ -408,6 +417,8 @@ def init_db(app):
             vuln_cols = [c['name'] for c in inspector.get_columns('vulnerabilities')]
             needed_vuln_cols = [
                 ('finding_id', 'VARCHAR(32)'),
+                ('scan_id', 'INTEGER'),
+                ('affected_host', 'VARCHAR(128) DEFAULT ""'),
                 ('confidence', 'VARCHAR(32) DEFAULT "Medium"'),
                 ('impact', 'FLOAT DEFAULT 5.0'),
                 ('likelihood', 'FLOAT DEFAULT 5.0'),

@@ -84,6 +84,12 @@
 <!-- Search & Multi-Filter Controls Bar -->
 <div class="card mb-24" style="padding: 16px 20px;">
   <form method="GET" action="{{ url_for('vulnerabilities.list_vulnerabilities') }}" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
+    {% if scan_id_filter %}
+      <input type="hidden" name="scan_id" value="{{ scan_id_filter }}">
+    {% endif %}
+    {% if assessment_id_filter %}
+      <input type="hidden" name="assessment_id" value="{{ assessment_id_filter }}">
+    {% endif %}
     
     <!-- Search Box -->
     <div style="flex: 1; min-width: 220px;">
@@ -131,6 +137,15 @@
     </div>
 
   </form>
+  {% if scan_id_filter %}
+  <div style="margin-top: 10px; font-size: 12px; color: var(--accent-cyan);">
+    Filtering findings for <strong>Scan #{{ scan_id_filter }}</strong>. <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}" style="color: var(--text-muted); text-decoration: underline;">Clear filter</a>
+  </div>
+  {% elif assessment_id_filter %}
+  <div style="margin-top: 10px; font-size: 12px; color: var(--accent-cyan);">
+    Filtering findings for <strong>Assessment #{{ assessment_id_filter }}</strong>. <a href="{{ url_for('vulnerabilities.list_vulnerabilities') }}" style="color: var(--text-muted); text-decoration: underline;">Clear filter</a>
+  </div>
+  {% endif %}
 </div>
 
 <!-- Vulnerabilities Table -->

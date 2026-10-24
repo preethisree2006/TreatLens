@@ -1,18 +1,22 @@
 """
 ThreatLens — Vulnerability Analysis Engine
 ===========================================
-Performs rule-based vulnerability analysis on actual scan evidence discovered
+Performs rule-based vulnerability analysis on factual scan evidence discovered
 by Nmap. Strictly produces explainable findings tied to observed open ports,
 service banners, and software versions.
 
 Rules:
-    - Insecure / plaintext protocols (Telnet, FTP, HTTP, legacy r-commands)
-    - Exposed network storage & database services (SMB, MySQL, Redis, MongoDB)
-    - Outdated/known vulnerable service versions (vsftpd 2.3.4 backdoor, legacy SSH/Apache)
-    - Missing TLS encryption on web interfaces
+    - Exposed MSRPC Endpoint Mapper (Port 135)
+    - Exposed SMB / NetBIOS File Sharing (Port 445 / 139)
+    - Missing TLS encryption on web interfaces (Port 80 / non-SSL HTTP)
+    - Insecure / plaintext protocols (Telnet Port 23, FTP Port 21)
+    - Outdated/known vulnerable software (e.g. vsftpd 2.3.4 backdoor)
+    - Exposed database services (MySQL, PostgreSQL, MongoDB, Redis, MSSQL)
+    - Exposed Remote Desktop (RDP Port 3389)
 
 NOTE: An open port is a discovered service, NOT automatically a vulnerability.
 Only ports with verifiable security risks or protocol weaknesses produce findings.
+CVE IDs are assigned strictly when verified evidence (product + version) supports it.
 """
 
 from datetime import datetime
@@ -47,11 +51,11 @@ def generate_finding_id() -> str:
 def analyze_service(service_record: ScanResult, assessment_target: str) -> list[dict]:
     """
     Evaluates an individual ScanResult against explainable vulnerability detection rules.
-    Returns a list of finding definition dicts (may be empty if no vulnerability exists).
+    Returns a list of finding definition dicts (empty if no vulnerability rule matches).
     """
     findings = []
     port = service_record.port
-    protocol = service_record.protocol.lower()
+    protocol = (service_record.protocol or 'tcp').lower()
     service = (service_record.service or '').lower()
     product = (service_record.product or '').strip()
     version = (service_record.version or '').strip()
@@ -59,6 +63,7 @@ def analyze_service(service_record: ScanResult, assessment_target: str) -> list[
 
     evidence_text = (
         f"Target: {assessment_target}\n"
+        f"Host: {service_record.host or assessment_target}\n"
         f"Port: {port}/{protocol}\n"
         f"Service: {service}\n"
         f"Product: {product or 'None specified'}\n"
@@ -92,10 +97,9 @@ def analyze_service(service_record: ScanResult, assessment_target: str) -> list[
         })
 
     # -------------------------------------------------------------
-    # Rule 2: FTP Service (Plaintext Authentication & Data)
+    # Rule 2: FTP Service (Plaintext Authentication / Specific Backdoor)
     # -------------------------------------------------------------
     if port == 21 or 'ftp' in service:
-        # Check for specific known vulnerable vsftpd version
         if 'vsftpd' in product.lower() and '2.3.4' in version:
             findings.append({
                 'name': 'vsftpd 2.3.4 Backdoor Command Execution Vulnerability',
@@ -122,123 +126,154 @@ def analyze_service(service_record: ScanResult, assessment_target: str) -> list[
                     'or session data by default, exposing transmitted files and administrative passwords to interception.'
                 ),
                 'likelihood': 6.5,
-                'impact': 7.0,
-                'cvss_score': 6.5,
-                'cve_id': 'CVE-1999-0497',
-                'cve_description': 'FTP protocol transmits authentication credentials in cleartext.',
-                'cve_url': 'https://nvd.nist.gov/vuln/detail/CVE-1999-0497',
+                'impact': 6.5,
+                'cvss_score': None,
+                'cve_id': None,
+                'cve_description': None,
+                'cve_url': None,
                 'confidence': 'High',
                 'remediation': 'Enforce FTPS (FTP over TLS) or replace with SFTP over port 22.',
                 'recommended_action': 'Configure TLS encryption on the FTP server or migrate file transfers to SFTP.',
             })
 
     # -------------------------------------------------------------
-    # Rule 3: SMB / NetBIOS File Sharing Exposed (Port 445 / 139)
+    # Rule 3: Microsoft RPC Endpoint Mapper (Port 135)
     # -------------------------------------------------------------
-    if port in (445, 139) or 'microsoft-ds' in service or 'netbios' in service or 'smb' in service:
+    if port == 135 or 'msrpc' in service or 'epmap' in service:
         findings.append({
-            'name': 'SMB File Sharing Protocol Exposed on Network Interface',
+            'name': 'Exposed Microsoft RPC Endpoint Mapper (Port 135)',
             'description': (
-                f'Server Message Block (SMB) is exposed on port {port}. Insecure SMB configurations '
-                'or legacy SMBv1 dialects expose systems to remote code execution (e.g. EternalBlue), '
-                'unauthenticated share enumeration, and network lateral movement.'
+                'Microsoft Windows Remote Procedure Call (MSRPC) Endpoint Mapper is listening on TCP port 135. '
+                'Exposing the RPC endpoint mapper enables network adversaries to query and enumerate registered '
+                'RPC interfaces, service UUIDs, and internal network endpoints on the target host.'
             ),
-            'likelihood': 7.5,
-            'impact': 9.0,
-            'cvss_score': 8.5,
-            'cve_id': 'CVE-2017-0144',
-            'cve_description': 'SMB remote code execution vulnerability (EternalBlue).',
-            'cve_url': 'https://nvd.nist.gov/vuln/detail/CVE-2017-0144',
-            'confidence': 'High',
-            'remediation': 'Disable SMBv1, require SMB signing and encryption, and restrict port 445 via firewall.',
-            'recommended_action': (
-                'Block TCP port 445 from untrusted subnets. Ensure SMBv1 is disabled and apply latest OS patches.'
-            ),
-        })
-
-    # -------------------------------------------------------------
-    # Rule 4: Exposed Database Management Ports
-    # -------------------------------------------------------------
-    db_ports = {
-        3306: ('MySQL', 'CVE-2000-0182'),
-        5432: ('PostgreSQL', 'CVE-2018-1058'),
-        27017: ('MongoDB', 'CVE-2019-2386'),
-        6379: ('Redis', 'CVE-2022-0543'),
-        1433: ('Microsoft SQL Server', 'CVE-2002-0649'),
-    }
-    if port in db_ports:
-        db_name, db_cve = db_ports[port]
-        findings.append({
-            'name': f'Exposed {db_name} Database Service on External Port',
-            'description': (
-                f'The {db_name} database service is listening on port {port}. Directly exposing database '
-                'services increases the attack surface for authentication brute-force, credential stuffing, '
-                'and potential unauthenticated access.'
-            ),
-            'likelihood': 7.0,
-            'impact': 8.5,
-            'cvss_score': 7.5,
-            'cve_id': db_cve,
-            'cve_description': f'Exposed {db_name} database interface without network boundary isolation.',
-            'cve_url': f'https://nvd.nist.gov/vuln/detail/{db_cve}',
-            'confidence': 'High',
-            'remediation': f'Bind {db_name} to localhost (127.0.0.1) and enforce firewall restrictions.',
-            'recommended_action': (
-                f'Set bind-address = 127.0.0.1 in the {db_name} configuration file and route remote access through an encrypted SSH tunnel or VPN.'
-            ),
-        })
-
-    # -------------------------------------------------------------
-    # Rule 5: Unencrypted HTTP (Port 80 without SSL/TLS)
-    # -------------------------------------------------------------
-    if (port == 80 or (service == 'http' and port not in (443, 8443))):
-        findings.append({
-            'name': 'Unencrypted HTTP Web Service Exposed (Missing TLS/HTTPS)',
-            'description': (
-                f'Web server on port {port} is serving content over unencrypted HTTP. '
-                'Without HTTPS, sensitive information, session tokens, and passwords can be intercepted '
-                'or modified in transit.'
-            ),
-            'likelihood': 5.5,
-            'impact': 5.0,
-            'cvss_score': 5.3,
+            'likelihood': 5.0,
+            'impact': 4.5,
+            'cvss_score': None,
             'cve_id': None,
             'cve_description': None,
             'cve_url': None,
             'confidence': 'High',
-            'remediation': 'Implement TLS/SSL certificates and configure automatic HTTP to HTTPS redirect.',
+            'remediation': 'Block inbound TCP port 135 from untrusted subnets using Windows Firewall or network ACLs.',
             'recommended_action': (
-                'Install a TLS certificate (Let\'s Encrypt or trusted CA), enable HTTPS on port 443, '
-                'and set HTTP 301 redirects to HTTPS.'
+                'Configure Windows Firewall to block TCP port 135 from external or untrusted networks. '
+                'Restrict RPC communication exclusively to authorized management hosts.'
             ),
         })
 
     # -------------------------------------------------------------
-    # Rule 6: Remote Desktop (RDP Port 3389)
+    # Rule 4: SMB / NetBIOS File Sharing Exposed (Port 445 / 139)
+    # -------------------------------------------------------------
+    if port in (445, 139) or 'microsoft-ds' in service or 'netbios' in service or 'smb' in service:
+        findings.append({
+            'name': 'Exposed Microsoft SMB Service (Port 445)',
+            'description': (
+                f'Server Message Block (SMB / microsoft-ds) is listening on port {port}. '
+                'Directly exposing SMB file sharing interfaces without strict network boundary controls '
+                'increases exposure to unauthenticated share enumeration, credential harvesting, '
+                'and lateral movement across internal subnets.'
+            ),
+            'likelihood': 6.5,
+            'impact': 6.5,
+            'cvss_score': None,
+            'cve_id': None,
+            'cve_description': None,
+            'cve_url': None,
+            'confidence': 'High',
+            'remediation': 'Restrict TCP port 445 via firewall, enforce SMB signing, and ensure legacy SMBv1 is disabled.',
+            'recommended_action': (
+                'Block TCP port 445 at the host or perimeter firewall for unauthorized networks. '
+                'Verify SMBv1 is disabled via PowerShell: Set-SmbServerConfiguration -EnableSMB1Protocol $false.'
+            ),
+        })
+
+    # -------------------------------------------------------------
+    # Rule 5: Unencrypted HTTP Web Service (Missing TLS/HTTPS)
+    # -------------------------------------------------------------
+    if port == 80 or (service == 'http' and port not in (443, 8443)):
+        prod_display = f" ({product})" if product else ""
+        findings.append({
+            'name': 'Unencrypted HTTP Web Service Exposed (Missing TLS/HTTPS)',
+            'description': (
+                f'A web server on port {port}{prod_display} is serving traffic over unencrypted HTTP. '
+                'Without TLS/HTTPS encryption, sensitive information, session cookies, and authentication '
+                'credentials are transmitted in cleartext and susceptible to network interception or tampering.'
+            ),
+            'likelihood': 6.0,
+            'impact': 6.0,
+            'cvss_score': None,
+            'cve_id': None,
+            'cve_description': None,
+            'cve_url': None,
+            'confidence': 'High',
+            'remediation': 'Implement TLS/SSL certificates and configure automatic HTTP-to-HTTPS redirection.',
+            'recommended_action': (
+                'Deploy an SSL/TLS certificate (Let\'s Encrypt or enterprise CA), bind HTTPS to port 443, '
+                'and configure 301 Permanent Redirects for all cleartext HTTP traffic.'
+            ),
+        })
+
+    # -------------------------------------------------------------
+    # Rule 6: Exposed Database Management Ports
+    # -------------------------------------------------------------
+    db_ports = {
+        3306: 'MySQL',
+        5432: 'PostgreSQL',
+        27017: 'MongoDB',
+        6379: 'Redis',
+        1433: 'Microsoft SQL Server',
+    }
+    if port in db_ports:
+        db_name = db_ports[port]
+        findings.append({
+            'name': f'Exposed {db_name} Database Service on External Port',
+            'description': (
+                f'The {db_name} database service is listening on port {port}. Directly exposing database '
+                'management ports to network interfaces increases exposure to automated authentication '
+                'brute-force attacks and potential unauthorized access.'
+            ),
+            'likelihood': 6.5,
+            'impact': 7.5,
+            'cvss_score': None,
+            'cve_id': None,
+            'cve_description': None,
+            'cve_url': None,
+            'confidence': 'High',
+            'remediation': f'Bind {db_name} exclusively to localhost (127.0.0.1) or an internal isolated network.',
+            'recommended_action': (
+                f'Configure the bind-address parameter to 127.0.0.1 in the {db_name} configuration file, '
+                'and tunnel remote administration sessions through an encrypted VPN or SSH tunnel.'
+            ),
+        })
+
+    # -------------------------------------------------------------
+    # Rule 7: Remote Desktop Protocol (RDP Port 3389)
     # -------------------------------------------------------------
     if port == 3389 or 'ms-wbt-server' in service or 'rdp' in service:
         findings.append({
             'name': 'Remote Desktop Protocol (RDP) Exposed to Network',
             'description': (
-                'Remote Desktop Services (RDP) is listening on port 3389. Directly accessible RDP ports '
-                'are frequent targets of automated brute-force attacks and protocol vulnerabilities (e.g., BlueKeep).'
+                'Remote Desktop Services (RDP) is listening on port 3389. Directly accessible RDP endpoints '
+                'are frequent targets of automated credential brute-force attacks and network intrusion.'
             ),
-            'likelihood': 7.0,
-            'impact': 8.5,
-            'cvss_score': 8.1,
-            'cve_id': 'CVE-2019-0708',
-            'cve_description': 'Remote Desktop Services Remote Code Execution Vulnerability (BlueKeep).',
-            'cve_url': 'https://nvd.nist.gov/vuln/detail/CVE-2019-0708',
+            'likelihood': 6.5,
+            'impact': 7.5,
+            'cvss_score': None,
+            'cve_id': None,
+            'cve_description': None,
+            'cve_url': None,
             'confidence': 'High',
-            'remediation': 'Require Network Level Authentication (NLA) and restrict RDP through VPN access.',
+            'remediation': 'Require Network Level Authentication (NLA) and restrict RDP access through VPN.',
             'recommended_action': (
-                'Enable Network Level Authentication (NLA) in System Settings. Block port 3389 at the perimeter firewall.'
+                'Enable Network Level Authentication (NLA) in System Settings. Restrict TCP port 3389 '
+                'at the host firewall to authorized administrative jump boxes or VPN subnets.'
             ),
         })
 
-    # Return all findings detected for this service record
+    # Attach common service metadata to every detected finding
     for f in findings:
         f['evidence'] = evidence_text
+        f['affected_host'] = service_record.host or assessment_target
         f['affected_port'] = port
         f['affected_service'] = service
         f['affected_protocol'] = protocol
@@ -250,8 +285,15 @@ def analyze_service(service_record: ScanResult, assessment_target: str) -> list[
 
 def analyze_scan(assessment_id: int, scan_id: int) -> list[Vulnerability]:
     """
-    Analyzes all scan results for a given scan and creates structured Vulnerability findings.
-    Ensures findings default to 'Needs Review' status and computes risk score via risk_engine.
+    Analyzes all scan results for a given scan and creates or safely updates
+    structured Vulnerability findings.
+    
+    Guarantees:
+    - Findings are strictly linked to assessment_id and scan_id
+    - Findings are created ONLY for services discovered by THIS scan
+    - Complete deduplication: repeated analysis updates existing findings without duplicates
+    - Findings removed if port/service is no longer present in current scan
+    - Does NOT touch findings of other scans or assessments
     """
     assessment = Assessment.query.get(assessment_id)
     scan = Scan.query.get(scan_id)
@@ -259,36 +301,66 @@ def analyze_scan(assessment_id: int, scan_id: int) -> list[Vulnerability]:
         return []
 
     services = ScanResult.query.filter_by(scan_id=scan.id).all()
-    created_findings = []
 
+    # 1. Collect all rule detections from current scan services
+    detected_items = []
     for svc in services:
-        detected_rules = analyze_service(svc, assessment.target)
+        rules = analyze_service(svc, assessment.target)
+        for r in rules:
+            detected_items.append((svc, r))
 
-        for rule in detected_rules:
-            # Check if this exact finding already exists for this assessment on this port
-            existing = Vulnerability.query.filter_by(
-                assessment_id=assessment.id,
-                affected_port=rule['affected_port'],
-                name=rule['name']
-            ).first()
+    # 2. Existing findings for THIS scan
+    existing_scan_vulns = Vulnerability.query.filter_by(scan_id=scan.id).all()
+    existing_map = {
+        (v.affected_port, v.name): v for v in existing_scan_vulns
+    }
 
-            if existing:
-                continue
+    current_keys = set()
+    result_findings = []
 
-            # Calculate risk using the risk engine
-            risk_info = calculate_risk(
-                likelihood=rule['likelihood'],
-                impact=rule['impact'],
-                cvss_score=rule.get('cvss_score')
-            )
+    for svc, rule in detected_items:
+        key = (rule['affected_port'], rule['name'])
+        current_keys.add(key)
 
+        risk_info = calculate_risk(
+            likelihood=rule['likelihood'],
+            impact=rule['impact'],
+            cvss_score=rule.get('cvss_score')
+        )
+
+        if key in existing_map:
+            # Safely update existing finding without duplicating or losing analyst validation
+            finding = existing_map[key]
+            finding.affected_host = svc.host or assessment.target
+            finding.affected_service = rule['affected_service']
+            finding.affected_protocol = rule['affected_protocol']
+            finding.product = rule.get('product', '')
+            finding.version = rule.get('version', '')
+            finding.evidence = rule['evidence']
+            finding.remediation = rule['remediation']
+            finding.recommended_action = rule['recommended_action']
+            finding.description = rule['description']
+            finding.confidence = rule.get('confidence', 'High')
+            finding.updated_at = datetime.utcnow()
+
+            # Only refresh risk score if still awaiting analyst triage
+            if finding.validation_status == Vulnerability.VAL_NEEDS_REVIEW:
+                finding.risk_score = risk_info['risk_score']
+                finding.severity = risk_info['severity']
+                finding.priority = risk_info['priority']
+
+            result_findings.append(finding)
+        else:
+            # Create new finding linked to THIS scan
             finding = Vulnerability(
                 finding_id=generate_finding_id(),
                 assessment_id=assessment.id,
+                scan_id=scan.id,
+                affected_host=svc.host or assessment.target,
                 name=rule['name'],
                 description=rule['description'],
                 severity=risk_info['severity'],
-                confidence=rule.get('confidence', 'Medium'),
+                confidence=rule.get('confidence', 'High'),
                 risk_score=risk_info['risk_score'],
                 impact=rule['impact'],
                 likelihood=rule['likelihood'],
@@ -305,14 +377,18 @@ def analyze_scan(assessment_id: int, scan_id: int) -> list[Vulnerability]:
                 remediation=rule['remediation'],
                 recommended_action=rule['recommended_action'],
                 priority=risk_info['priority'],
-                validation_status=Vulnerability.VAL_NEEDS_REVIEW,  # Rule: initially 'Needs Review'
+                validation_status=Vulnerability.VAL_NEEDS_REVIEW,
                 is_false_positive=False,
                 source='nmap_rule_engine',
                 discovered_at=datetime.utcnow(),
             )
-
             db.session.add(finding)
-            created_findings.append(finding)
+            result_findings.append(finding)
+
+    # 3. Clean up any stale findings for THIS scan that are no longer supported by current scan results
+    for key, old_v in existing_map.items():
+        if key not in current_keys:
+            db.session.delete(old_v)
 
     db.session.commit()
-    return created_findings
+    return result_findings

@@ -25,6 +25,8 @@ flask_session/
 
 # Database
 database/database.db
+database/*.db*
+*.bak
 
 # IDE
 .vscode/

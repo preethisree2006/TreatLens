@@ -140,10 +140,19 @@ def generate_pdf_report(assessment_id: int, report_type: str = 'full') -> tuple[
     # 2. Executive Summary
     # -------------------------------------------------------------
     story.append(Paragraph("1. Executive Summary", h1_style))
-    active_vulns = assessment.vulnerabilities.filter_by(is_false_positive=False).all()
-    fp_vulns = assessment.vulnerabilities.filter_by(is_false_positive=True).all()
     latest_scan = assessment.latest_scan
     service_count = latest_scan.results.count() if latest_scan else 0
+
+    if latest_scan:
+        active_vulns = assessment.vulnerabilities.filter_by(is_false_positive=False).filter(
+            (Vulnerability.scan_id == latest_scan.id) | (Vulnerability.scan_id.is_(None))
+        ).all()
+        fp_vulns = assessment.vulnerabilities.filter_by(is_false_positive=True).filter(
+            (Vulnerability.scan_id == latest_scan.id) | (Vulnerability.scan_id.is_(None))
+        ).all()
+    else:
+        active_vulns = assessment.vulnerabilities.filter_by(is_false_positive=False).all()
+        fp_vulns = assessment.vulnerabilities.filter_by(is_false_positive=True).all()
 
     exec_summary_text = (
         f"This document provides the official technical security assessment report for target "
@@ -239,13 +248,19 @@ def generate_pdf_report(assessment_id: int, report_type: str = 'full') -> tuple[
     # 5. Risk Summary & Severity Breakdown
     # -------------------------------------------------------------
     story.append(Paragraph("4. Risk Severity Summary", h1_style))
+    crit_c = sum(1 for v in active_vulns if v.severity == 'Critical')
+    high_c = sum(1 for v in active_vulns if v.severity == 'High')
+    med_c = sum(1 for v in active_vulns if v.severity == 'Medium')
+    low_c = sum(1 for v in active_vulns if v.severity == 'Low')
+    info_c = sum(1 for v in active_vulns if v.severity == 'Informational')
+
     sev_counts = [
         [Paragraph("<b>Severity Level</b>", body_style), Paragraph("<b>Active Count</b>", body_style), Paragraph("<b>Priority & SLA</b>", body_style)],
-        [Paragraph("<font color='#ef4444'><b>Critical</b></font>", body_style), str(assessment.critical_count), "Priority 1 — Immediate (4h)"],
-        [Paragraph("<font color='#f97316'><b>High</b></font>", body_style), str(assessment.high_count), "Priority 2 — Urgent (24h)"],
-        [Paragraph("<font color='#eab308'><b>Medium</b></font>", body_style), str(assessment.medium_count), "Priority 3 — Scheduled (7d)"],
-        [Paragraph("<font color='#22c55e'><b>Low</b></font>", body_style), str(assessment.low_count), "Priority 4 — Routine (30d)"],
-        [Paragraph("<font color='#64748b'><b>Informational</b></font>", body_style), str(assessment.info_count), "Priority 5 — Monitoring"],
+        [Paragraph("<font color='#ef4444'><b>Critical</b></font>", body_style), str(crit_c), "Priority 1 — Immediate (4h)"],
+        [Paragraph("<font color='#f97316'><b>High</b></font>", body_style), str(high_c), "Priority 2 — Urgent (24h)"],
+        [Paragraph("<font color='#eab308'><b>Medium</b></font>", body_style), str(med_c), "Priority 3 — Scheduled (7d)"],
+        [Paragraph("<font color='#22c55e'><b>Low</b></font>", body_style), str(low_c), "Priority 4 — Routine (30d)"],
+        [Paragraph("<font color='#64748b'><b>Informational</b></font>", body_style), str(info_c), "Priority 5 — Monitoring"],
         [Paragraph("<b>Total Active Findings</b>", body_style), str(len(active_vulns)), "Excludes False Positives"],
     ]
     t_sev = Table(sev_counts, colWidths=[140, 100, 290])

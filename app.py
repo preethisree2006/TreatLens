@@ -29,11 +29,15 @@ def create_app(config_name=None):
 
     # --- Configuration ---
     app.config['SECRET_KEY'] = 'cyberproject-phase1-dev-key-change-in-production'
-    # Use absolute path so the DB works regardless of working directory
-    db_path = BASE_DIR / 'database' / 'database.db'
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    if config_name == 'testing':
+        app.config['TESTING'] = True
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+    else:
+        # Use absolute path so the DB works regardless of working directory
+        db_path = BASE_DIR / 'database' / 'database.db'
+        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['APP_VERSION'] = '1.0.0 — Phase 3'
+    app.config['APP_VERSION'] = '1.0.0 — Final'
     app.config['APP_NAME'] = 'ThreatLens — Vulnerability Assessment System'
 
     # --- Initialize Database ---

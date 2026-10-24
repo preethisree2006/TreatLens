@@ -26,8 +26,18 @@ def list_vulnerabilities():
     status_filter = request.args.get('status', 'all').lower()
     target_filter = request.args.get('target', '').strip()
     search_query = request.args.get('q', '').strip()
+    scan_id_filter = request.args.get('scan_id', type=int)
+    assessment_id_filter = request.args.get('assessment_id', type=int)
 
     query = Vulnerability.query
+
+    # Scan ID filter
+    if scan_id_filter:
+        query = query.filter(Vulnerability.scan_id == scan_id_filter)
+
+    # Assessment ID filter
+    if assessment_id_filter:
+        query = query.filter(Vulnerability.assessment_id == assessment_id_filter)
 
     # Severity filter
     if severity_filter != 'all':
@@ -45,7 +55,10 @@ def list_vulnerabilities():
 
     # Target filter
     if target_filter:
-        query = query.join(Assessment).filter(Assessment.target == target_filter)
+        query = query.filter(
+            (Vulnerability.affected_host == target_filter) |
+            (Vulnerability.assessment.has(Assessment.target == target_filter))
+        )
 
     # Search keyword
     if search_query:
@@ -67,23 +80,30 @@ def list_vulnerabilities():
         .all()
     )
 
-    # Global counts for badge indicators
-    all_vulns = Vulnerability.query
+    # Scoped counts based on scan/assessment if filtered, else global counts
+    count_base = Vulnerability.query
+    if scan_id_filter:
+        count_base = count_base.filter(Vulnerability.scan_id == scan_id_filter)
+    elif assessment_id_filter:
+        count_base = count_base.filter(Vulnerability.assessment_id == assessment_id_filter)
+
     counts = {
-        'total':          all_vulns.count(),
-        'active':         all_vulns.filter_by(is_false_positive=False).count(),
-        'critical':       all_vulns.filter_by(severity='Critical', is_false_positive=False).count(),
-        'high':           all_vulns.filter_by(severity='High', is_false_positive=False).count(),
-        'medium':         all_vulns.filter_by(severity='Medium', is_false_positive=False).count(),
-        'low':            all_vulns.filter_by(severity='Low', is_false_positive=False).count(),
-        'informational':  all_vulns.filter_by(severity='Informational', is_false_positive=False).count(),
-        'confirmed':      all_vulns.filter_by(validation_status='Confirmed', is_false_positive=False).count(),
-        'false_positive': all_vulns.filter_by(is_false_positive=True).count(),
-        'needs_review':   all_vulns.filter_by(validation_status='Needs Review', is_false_positive=False).count(),
+        'total':          count_base.count(),
+        'active':         count_base.filter_by(is_false_positive=False).count(),
+        'critical':       count_base.filter_by(severity='Critical', is_false_positive=False).count(),
+        'high':           count_base.filter_by(severity='High', is_false_positive=False).count(),
+        'medium':         count_base.filter_by(severity='Medium', is_false_positive=False).count(),
+        'low':            count_base.filter_by(severity='Low', is_false_positive=False).count(),
+        'informational':  count_base.filter_by(severity='Informational', is_false_positive=False).count(),
+        'confirmed':      count_base.filter_by(validation_status='Confirmed', is_false_positive=False).count(),
+        'false_positive': count_base.filter_by(is_false_positive=True).count(),
+        'needs_review':   count_base.filter_by(validation_status='Needs Review', is_false_positive=False).count(),
     }
 
     # Unique targets for filtering dropdown
-    all_targets = [a.target for a in Assessment.query.all()]
+    targets_from_assessments = [a.target for a in Assessment.query.all() if a.target]
+    targets_from_vulns = [v[0] for v in db.session.query(Vulnerability.affected_host).distinct().all() if v[0]]
+    all_targets = sorted(list(set(targets_from_assessments + targets_from_vulns)))
 
     return render_template(
         'results.html',
@@ -93,6 +113,8 @@ def list_vulnerabilities():
         status_filter=status_filter,
         target_filter=target_filter,
         search_query=search_query,
+        scan_id_filter=scan_id_filter,
+        assessment_id_filter=assessment_id_filter,
         counts=counts,
         all_targets=all_targets,
     )

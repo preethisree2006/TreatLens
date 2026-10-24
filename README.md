@@ -1,144 +1,100 @@
-# 🛡️ ThreatLens — Cybersecurity Vulnerability Assessment & Risk Management System
+# ThreatLens — Cybersecurity Vulnerability Assessment & Risk Management System
 
-> **Academic Final-Year B.E. CSE Project**
->
-> A realistic, working web-based Vulnerability Assessment and Risk Management System that demonstrates the complete security lifecycle: authorized network scanning, structured service parsing, rule-based vulnerability analysis, severity classification, quantitative risk scoring, CVE threat mapping, manual analyst validation, false-positive handling, actionable remediation recommendations, and automated PDF security report generation.
-
----
-
-## ⚠️ Ethical & Legal Notice
-
-> **IMPORTANT:** ThreatLens is designed exclusively for authorized cybersecurity testing, educational research, and evaluation of systems you own or have explicit, documented permission to assess.
->
-> **Strict Operational Safeguards:**
-> - Offensive exploitation, brute forcing, password cracking, denial-of-service, or destructive actions are **NEVER** implemented.
-> - Network scanning is strictly limited to non-intrusive service discovery (`nmap -sV -T3`).
-> - Arbitrary Nmap argument injection is strictly blocked via rigorous input validation.
-> - Unauthorized port scanning or penetration testing without written authorization is illegal.
+> **Final-Year / Internship Capstone Cybersecurity Project**  
+> An explainable, evidence-based, web-based vulnerability assessment and risk management platform demonstrating the complete defensive security lifecycle in an authorized environment.
 
 ---
 
 ## 📌 Project Overview
 
-Traditional cybersecurity scanners often overwhelm security teams with thousands of raw logs or superficial alert lists without context. **ThreatLens** bridges the gap between raw network discovery and operational risk remediation by implementing a disciplined, multi-stage assessment pipeline:
+**ThreatLens** is a defensive cybersecurity assessment system that performs controlled service discovery, parses scanner output into structured records, evaluates services using evidence-based rules, correlates verified CVE threat intelligence, calculates quantitative risk scores, enables analyst-in-the-loop validation, and generates publication-grade PDF assessment reports.
+
+### Purpose
+A web-based system that performs controlled Nmap service discovery, analyzes discovered services using evidence-based rules, calculates risk, supports analyst validation, and generates security assessment reports.
+
+### ⚠️ Important Clarification: Service Discovery vs. Vulnerabilities
+**Nmap discovers open ports and running services; it does not automatically prove that every open port is a vulnerability.**  
+ThreatLens analyzes the discovered services and creates findings **only when its rules have verifiable evidence** (e.g., cleartext protocol, exposed administrative interface, known vulnerable version). Discovered services without identifiable flaws remain safe open services rather than being falsely flagged. ThreatLens strictly does **not** fabricate findings or assign arbitrary CVE identifiers.
+
+---
+
+## 🔄 End-to-End Workflow
 
 ```
-Dashboard
-   ↓
-Create Assessment (Target Scope & Validation)
-   ↓
-Controlled Security Scan (Nmap -sV -T3)
-   ↓
-Scan Results (Structured Host & Service Parsing)
-   ↓
-Vulnerability Analysis Engine (Rule-based Evidence Detection)
-   ↓
-Severity Classification & Risk Scoring (Likelihood × Impact)
-   ↓
-CVE Intelligence Mapping (NVD API v2 with Caching & Fallback)
-   ↓
-Manual Validation & False-Positive Management
-   ↓
-Remediation Engine (Actionable Guidance & SLA Timelines)
-   ↓
-Risk Prioritization Matrix (P1 to P5)
-   ↓
-Executive & Technical PDF Security Report Export
+Target Specification (e.g., 127.0.0.1 / localhost)
+       │
+       ▼
+Target Validation & Command-Injection Guard
+       │
+       ▼
+Controlled Nmap Scan (nmap -sV -T3 <target>)
+       │
+       ▼
+Structured Output Parsing (XML & Text Parser)
+       │
+       ▼
+Rule-Based Vulnerability Engine (Evidence Evaluation)
+       │
+       ▼
+CVE Intelligence Correlation (NVD API v2 with Caching)
+       │
+       ▼
+Quantitative Risk Scoring (Likelihood × Impact / 10.0)
+       │
+       ▼
+Manual Analyst Validation (Confirmed / False Positive)
+       │
+       ▼
+Risk Prioritization Matrix (P1 Critical → P5 Info)
+       │
+       ▼
+Professional Executive & Technical PDF Report
 ```
 
 ---
 
-## 🎯 Problem Statement & Objectives
+## 🎯 Demo Target: `127.0.0.1` / `localhost`
 
-### Problem Statement
-Organizations struggle with vulnerability overload, high false-positive rates, and delayed remediation cycles. Educational prototypes often either simulate entire scan results with fabricated data or act merely as thin shells running a command without data persistence, scoring models, analyst validation, or risk prioritization.
+The primary demonstration target is `127.0.0.1` (`localhost`), representing the local host computer.
 
-### Objectives
-1. **Authorized Scanning:** Execute controlled, non-destructive Nmap service detection scans safely against authorized targets.
-2. **Factual Parsing:** Parse real scanner XML output into structured database records (port, protocol, service, product, version).
-3. **Evidence-Based Analysis:** Evaluate discovered services against deterministic security rules without fabricating nonexistent vulnerabilities.
-4. **Transparent Risk Scoring:** Calculate explainable risk scores using `(Likelihood × Impact) / 10.0` combined with CVSS benchmarks.
-5. **Analyst Validation & False-Positive Handling:** Provide an interactive triage workflow allowing analysts to confirm findings, mark false positives (excluding them from active risk calculations), and maintain an audit log.
-6. **Actionable Remediation:** Provide prioritized fixes and SLA timelines for every confirmed weakness.
-7. **Publication-Grade Reporting:** Generate downloadable PDF security assessment reports using ReportLab.
+When scanned at runtime using `nmap -sV -T3 127.0.0.1`, Nmap discovers the actual listening services on the host machine. On standard Windows systems with ThreatLens running:
+- **Port 135/tcp** → `msrpc` (Microsoft Windows RPC)
+- **Port 445/tcp** → `microsoft-ds` (Microsoft SMB File Sharing)
+- **Port 5000/tcp** → `http` (Werkzeug / ThreatLens Web Server)
 
----
+ThreatLens evaluates these exact services:
+1. **Port 135:** Identifies *Exposed Microsoft RPC Endpoint Mapper (Port 135)* [Severity: Low, CVE: None]
+2. **Port 445:** Identifies *Exposed Microsoft SMB Service (Port 445)* [Severity: Medium, CVE: None]
+3. **Port 5000:** Identifies *Unencrypted HTTP Web Service Exposed (Missing TLS/HTTPS)* [Severity: Low/Medium, CVE: None]
 
-## ✨ Features
-
-- **Centralized Security Operations Dashboard:**
-  - Real database metrics: Total Assessments, Total Scans, Total Findings, Active Findings, Critical/High/Medium/Low counts, Confirmed findings, and False-Positive metrics.
-  - Interactive Chart.js charts: Severity Donut distribution and Assessment Status breakdown.
-  - Quick-triage tables for recent scans and top priority risks.
-- **Assessment Scope Management:**
-  - Standardized ID format: `ASM-YYYYMMDD-XXX`.
-  - Target input validation blocking command separators and flag injections.
-- **Controlled Security Scanning Engine:**
-  - Safe subprocess execution running `nmap -sV -T3 <target>`.
-  - Missing Nmap detection with friendly troubleshooting guidance.
-  - Structured storage of hosts, ports, states, services, software products, and version strings.
-- **Rule-Based Vulnerability Analysis:**
-  - Flags dangerous exposed services (e.g. Telnet cleartext, unencrypted FTP, exposed databases, cleartext HTTP).
-  - Matches specific vulnerable software signatures (e.g. vsftpd 2.3.4 backdoor).
-  - Discovered services without identifiable flaws remain safe open ports (not falsely flagged).
-- **Quantitative Risk Engine:**
-  - Likelihood (1–10) × Impact (1–10) normalized to a 10.0 scale.
-  - Priority classes: P1 (Critical), P2 (High), P3 (Medium), P4 (Low), P5 (Informational).
-  - Defined SLA remediation deadlines: Immediate, 24 Hours, 7 Days, 30 Days.
-- **CVE Intelligence Integration:**
-  - Integrates with the NIST NVD API v2 with SQLite caching to reduce external network calls.
-  - Offline fallback dictionary for resilient air-gapped or lab operation.
-  - Direct links to official NIST vulnerability entries.
-- **Interactive Analyst Validation & False-Positive Management:**
-  - Status options: `Needs Review` (default), `Confirmed`, `False Positive`, `Resolved`.
-  - False positives are dynamically excluded from active risk metrics and prioritization matrices.
-  - Complete validation history audit trail with analyst timestamps and justification notes.
-- **Risk Prioritization Matrix (`/risk`):**
-  - Ordered by priority urgency (P1 → P5) and descending risk score.
-  - False positives strictly filtered out.
-- **Professional PDF Report Export (`/reports`):**
-  - Cover page, Executive summary, Assessment scope, Discovered services table, Risk summary, Detailed findings with scan evidence, Separated false-positive register, and Remediation roadmap.
+**Result Integrity:** The system displays **only** findings supported by discovered ports. Unrelated services (such as FTP, Telnet, vsftpd) are **never** displayed unless that specific service was actually discovered in the scan.
 
 ---
 
-## 🛠️ Technology Stack
-
-| Layer | Technologies |
-|---|---|
-| **Backend Framework** | Python 3.10+, Flask 3.0+ |
-| **Database & ORM** | SQLite 3, Flask-SQLAlchemy 3.1+ |
-| **Security Scanner** | Nmap 7.90+ (Service Detection `-sV -T3`) |
-| **PDF Generation** | ReportLab 4.2+ |
-| **Frontend UI** | Semantic HTML5, Vanilla Modern CSS (Dark Cybersecurity Theme), JavaScript |
-| **Visualization** | Chart.js 4.4+ |
-| **External Threat Intelligence** | NIST National Vulnerability Database (NVD API v2) |
-
----
-
-## 🏛️ System Architecture
+## 🏛️ Project Architecture
 
 ```
 cybersecurity-vulnerability-assessment/
 │
 ├── app.py                      # Application factory & route registration
-├── requirements.txt            # Project dependencies
-├── README.md                   # Complete system documentation
+├── requirements.txt            # Python dependencies
+├── README.md                   # System documentation
+├── PROJECT_DOCUMENTATION.md    # Comprehensive technical viva/defense guide
+├── .gitignore                  # Git tracking rules
 │
 ├── database/
 │   ├── __init__.py
-│   ├── db.py                   # SQLAlchemy models (Assessment, Scan, ScanResult, Vulnerability, etc.)
-│   └── database.db             # Persistent SQLite database
+│   └── db.py                   # SQLAlchemy ORM models & table migrations
 │
 ├── scanner/
 │   ├── __init__.py
-│   ├── nmap_scanner.py         # Subprocess execution, target validation & Nmap path resolution
-│   ├── parser.py               # Nmap XML & text parsing into structured service dictionaries
-│   ├── scanner.py              # OOP Scanner wrapper interface
-│   └── vuln_engine.py          # Rule-based vulnerability analysis & evidence evaluator
+│   ├── nmap_scanner.py         # Subprocess execution, Nmap path resolution & target validation
+│   ├── parser.py               # Nmap XML and plain-text output parser
+│   └── vuln_engine.py          # Evidence-based rule engine & scan-specific deduplication
 │
 ├── risk/
 │   ├── __init__.py
-│   └── risk_engine.py          # Numerical risk scoring, priority mapping & SLA timelines
+│   └── risk_engine.py          # Mathematical risk formulation, P1-P5 priorities & SLAs
 │
 ├── cve/
 │   ├── __init__.py
@@ -146,14 +102,14 @@ cybersecurity-vulnerability-assessment/
 │
 ├── reports/
 │   ├── __init__.py
-│   ├── report_generator.py     # ReportLab PDF report builder
+│   ├── report_generator.py     # ReportLab PDF security assessment report builder
 │   └── generated/              # Output directory for compiled PDF reports
 │
 ├── routes/
 │   ├── __init__.py
 │   ├── dashboard.py            # Real-time metrics & Chart.js data endpoints
-│   ├── assessments.py          # Assessment CRUD & scan triggering
-│   ├── scans.py                # Scan history & discovered services views
+│   ├── assessments.py          # Assessment CRUD & scan execution
+│   ├── scans.py                # Scan results & discovered ports view
 │   ├── vulnerabilities.py      # Finding listing, multi-filter & analyst triage validation
 │   ├── risk.py                 # Risk prioritization matrix (P1–P5)
 │   └── reports.py              # PDF report generation & file download
@@ -172,204 +128,80 @@ cybersecurity-vulnerability-assessment/
 │   ├── reports.html            # PDF report generator & archive
 │   └── errors/                 # 404 & 500 error handlers
 │
-└── static/
-    ├── css/style.css           # Premium cyber-themed dark UI design system
-    └── js/main.js              # Chart initializers & dynamic metric animations
+├── static/
+│   ├── css/style.css           # Modern cyber-themed dark UI design system
+│   └── js/main.js              # Chart initializers & dynamic metric animations
+│
+└── tests/
+    └── test_threatlens.py      # Automated unit and integration test suite
 ```
 
 ---
 
-## 🗄️ Database Entity-Relationship Model
+## 🗄️ Database Schema & Entities
 
-```
-┌──────────────────┐       1:N       ┌──────────────────┐       1:N       ┌──────────────────┐
-│   assessments    │────────────────>│      scans       │────────────────>│   scan_results   │
-├──────────────────┤                 ├──────────────────┤                 ├──────────────────┤
-│ id (PK)          │                 │ id (PK)          │                 │ id (PK)          │
-│ assessment_id    │                 │ scan_id          │                 │ scan_id (FK)     │
-│ name             │                 │ assessment_id(FK)│                 │ port, protocol   │
-│ target           │                 │ status           │                 │ state, service   │
-│ description      │                 │ started_at       │                 │ product, version │
-│ status           │                 │ raw_output       │                 │ extra_info       │
-└──────────────────┘                 └──────────────────┘                 └──────────────────┘
-         │
-         │ 1:N
-         ▼
-┌──────────────────┐       1:N       ┌─────────────────────┐
-│ vulnerabilities  │────────────────>│ validation_records  │
-├──────────────────┤                 ├─────────────────────┤
-│ id (PK)          │                 │ id (PK)             │
-│ assessment_id(FK)│                 │ vulnerability_id(FK)│
-│ name, description│                 │ analyst             │
-│ severity         │                 │ previous_status     │
-│ risk_score, cvss │                 │ new_status          │
-│ cve_id           │                 │ notes               │
-│ affected_port    │                 │ created_at          │
-│ validation_status│                 └─────────────────────┘
-│ is_false_positive│
-└──────────────────┘
-```
+The SQLite database (`database/database.db`) manages 7 core relational tables:
+
+| Table | Description |
+|---|---|
+| `assessments` | Target assessment sessions (target, scope name, lifecycle status) |
+| `scans` | Nmap scan execution records (command, status, timing, raw output) |
+| `scan_results` | Individual discovered ports and services (port, protocol, service, product, version) |
+| `vulnerabilities` | Factual findings linked directly to `assessment_id` and `scan_id` |
+| `validation_records` | Audit log of security analyst triage decisions |
+| `cve_records` | Local SQLite cache of NIST NVD vulnerability records |
+| `reports` | Generated PDF security assessment metadata and file paths |
 
 ---
 
-## ⚙️ Installation & Setup
+## 🛡️ Safety & Ethical Scanning Model
+
+- **Authorized Targets Only:** Validates all targets before execution. Supports `localhost`, `127.0.0.1`, private IP addresses, or authorized hostnames.
+- **Strict Injection Protection:** Reject flags starting with `-` and command separators (`;`, `&`, `|`, `` ` ``, `$()`).
+- **Safe Scanning:** Uses strictly `nmap -sV -T3 <target>` with arguments passed as a safe list (`subprocess.run(shell=False)`).
+- **Non-Destructive:** No exploit payloads, no brute force, no denial-of-service, no intrusive NSE scripts.
+
+---
+
+## ⚙️ Installation & Running
 
 ### 1. Prerequisites
 - Python 3.10 or higher
-- Git
-- Windows, Linux, or macOS
+- Nmap installed and available in system `PATH` (Verify: `nmap --version`)
 
-### 2. Clone Repository & Setup Virtual Environment
-```bash
-# Clone repository
-git clone https://github.com/your-username/cybersecurity-vulnerability-assessment.git
-cd cybersecurity-vulnerability-assessment
-
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# Windows:
+### 2. Activate Virtual Environment
+```powershell
+# Windows PowerShell
 .\venv\Scripts\activate
-# Linux/macOS:
-source venv/bin/activate
+```
 
-# Install required dependencies
+### 3. Install Dependencies
+```bash
 pip install -r requirements.txt
 ```
 
-### 3. Nmap Setup (Windows & Linux)
-
-ThreatLens utilizes the system Nmap binary for service discovery.
-
-#### On Windows:
-1. Download the official installer from [https://nmap.org/download.html](https://nmap.org/download.html) (e.g. `nmap-7.95-setup.exe`).
-2. Run the installer and check the box to install Npcap and command-line tools.
-3. Ensure Nmap is included in your system `PATH` (typically `C:\Program Files (x86)\Nmap`).
-4. Verify by opening PowerShell and executing:
-   ```powershell
-   nmap --version
-   ```
-
-> **Note on Nmap Availability:**
-> If Nmap is not installed or not in PATH, ThreatLens will **NOT crash**. It gracefully displays:
-> *"Nmap is not installed or could not be found. Please install Nmap and ensure it is available in the system PATH."*
-> You can still inspect assessments, manage findings, and export reports.
-
-#### On Linux (Debian/Ubuntu):
-```bash
-sudo apt update && sudo apt install nmap -y
-nmap --version
-```
-
----
-
-## 🚀 Running the Application
-
-Ensure your virtual environment is active:
-
+### 4. Run the Application
 ```bash
 python app.py
 ```
-
-The application will start on:
-```
-http://127.0.0.1:5000
-```
-
-Open your browser and navigate to `http://127.0.0.1:5000` to access the ThreatLens Dashboard.
+Open your browser and navigate to:  
+**http://127.0.0.1:5000**
 
 ---
 
-## 📖 End-to-End User Workflow
+## 🧪 Running Automated Tests
 
-1. **Dashboard:** Review system status, tracked targets, and high-level risk statistics.
-2. **New Assessment:** Click **"New Assessment"**, input an authorized target (e.g. `127.0.0.1`), descriptive name, and scope notes.
-3. **Trigger Security Scan:** On the Assessment Details page, click **"Run Security Scan"**. Read and accept the authorization modal.
-4. **Scan Execution:** ThreatLens executes `nmap -sV -T3 <target>` safely via subprocess and saves discovered services.
-5. **Vulnerability Analysis:** Discovered open ports are processed by the vulnerability engine. Findings are cataloged with status `Needs Review`.
-6. **Analyst Triage & Manual Validation:** Open a finding to view scan evidence and CVE details:
-   - Mark as `Confirmed` if verified as an active threat.
-   - Mark as `False Positive` with justification notes if benign; it is immediately removed from the active risk score.
-7. **Risk Prioritization:** Visit `/risk` to review active vulnerabilities ordered by priority (P1 to P5) and SLA deadlines.
-8. **PDF Report Export:** Go to `/reports`, select your assessment, and click **"Generate PDF Report"** to compile and download an executive security report.
-
----
-
-## 📐 Risk Scoring Methodology
-
-ThreatLens computes risk scores transparently using a deterministic formula grounded in security risk principles:
-
-$$\text{Base Risk Score} = \frac{\text{Likelihood} \times \text{Impact}}{10.0}$$
-
-Where:
-- **Likelihood (1–10):** Evaluates ease of exploitation, protocol exposure, and network reachability.
-- **Impact (1–10):** Evaluates confidentiality, integrity, and availability impact if exploited.
-
-When official CVSS v3.x intelligence is available, the score is mathematically blended:
-
-$$\text{Final Risk Score} = 0.6 \times \text{Base Risk} + 0.4 \times \text{CVSS}$$
-
-### Severity & Priority Classification Matrix
-
-| Final Risk Score | Severity Level | Priority | SLA Remediation Timeline |
-|---|---|---|---|
-| **9.0 – 10.0** | Critical | **P1** | Immediate Response |
-| **7.0 – 8.9** | High | **P2** | &le; 24 Hours |
-| **4.0 – 6.9** | Medium | **P3** | &le; 7 Days |
-| **1.0 – 3.9** | Low | **P4** | &le; 30 Days |
-| **0.0 – 0.9** | Informational | **P5** | Review when possible |
-
----
-
-## 🧪 Testing & Validation
-
-### Automated Verification Test Suite
-Run the test suite using your virtual environment:
-
+Run the full automated test suite (target validation, parser, rule engine, deduplication, risk scoring, routes, and PDF generation):
 ```powershell
-.\venv\Scripts\python -c "
-from app import create_app
-from database.db import Assessment, Scan, Vulnerability
-from scanner.nmap_scanner import validate_target
-from reports.report_generator import generate_pdf_report
-import os
-
-app = create_app('testing')
-client = app.test_client()
-
-with app.app_context():
-    print('Checking all routes...')
-    for r in ['/', '/dashboard', '/assessments/', '/scans/', '/vulnerabilities/', '/risk/', '/reports/']:
-        res = client.get(r)
-        assert res.status_code == 200, f'Failed {r}'
-        print(f' - {r}: OK')
-    print('Testing target validation...')
-    assert validate_target('127.0.0.1')[0] is True
-    assert validate_target('; bad command')[0] is False
-    print('Verification tests complete.')
-"
+.\venv\Scripts\python.exe -m unittest tests/test_threatlens.py
 ```
 
 ---
 
-## ⚠️ Known Limitations
+## 📋 Key Capabilities Demonstrated
 
-1. **Service Discovery Scope:** Scanning uses standard TCP port discovery (`nmap -sV -T3`). It does not run invasive vulnerability scripts (`--script vuln`) by default to protect target stability.
-2. **NVD API Rate Limits:** Public queries to the NIST NVD API may be throttled without an API key. ThreatLens mitigates this with an SQLite caching table and an internal fallback dictionary.
-3. **No Active Exploitation:** The system intentionally does not exploit services or confirm compromise through invasive payloads.
-
----
-
-## 🔮 Future Enhancements
-
-- Multi-user role-based access control (Admin, Lead Analyst, Auditor).
-- Automated scheduled re-scanning and remediation tracking.
-- Webhook notifications for Slack and Microsoft Teams on Critical findings.
-- NIST SP 800-53 and ISO 27001 compliance control mapping.
-
----
-
-## 📄 License & Academic Attribution
-
-This project was developed as a final-year academic capstone in Computer Science and Engineering. It is distributed for educational and research use under the MIT License.
+1. **Scan-Specific Findings:** Every finding is linked to `scan_id` and `affected_host`. Historical vulnerabilities from previous scans never contaminate new assessments.
+2. **True Deduplication:** Clicking "Re-analyze Scan" updates existing findings safely without producing duplicate rows.
+3. **Analyst Triage & False-Positive Handling:** Security analysts can mark findings as *Confirmed* or *False Positive*. False positives are mathematically excluded from active risk counts, the risk prioritization matrix, and executive reports.
+4. **Dynamic Dashboard Metrics:** All dashboard cards (Total Assessments, Total Scans, Total Findings, Active Findings, Severity Counts, False Positives) calculate live values directly from the database.
+5. **PDF Report Compilation:** Downloads executive and technical reports generated on demand with ReportLab, containing only the discovered services and validated findings of the selected assessment.
